@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Viewport-fit=cover es CRUCIAL para que use todo el iPhone, detrás del notch -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Budapest Quest</title>
     
     <!-- Cargamos Tailwind CSS para el diseño -->
@@ -11,26 +12,53 @@
     <!-- Cargamos FontAwesome para los íconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Cargamos React (Servidores de alta disponibilidad, sin restricción CORS) -->
+    <!-- Cargamos React -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     
-    <!-- Cargamos Babel para compilar en el navegador -->
+    <!-- Cargamos Babel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
 
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #020617; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            background-color: #020617; 
+            -webkit-tap-highlight-color: transparent;
+        }
         * { touch-action: manipulation; }
         #root { width: 100vw; height: 100vh; }
-        .loading-text { color: #38bdf8; text-align: center; margin-top: 40vh; font-family: sans-serif; font-weight: bold; font-size: 1.2rem; }
+        
+        /* Premium Background Gradient */
+        .bg-radar {
+            background: radial-gradient(circle at center, #083344 0%, #020617 70%);
+        }
+
+        /* Glassmorphism utilities */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .loading-text { color: #22d3ee; text-align: center; margin-top: 40vh; font-family: sans-serif; font-weight: bold; font-size: 1.2rem; animation: pulse 2s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Ocultar barra de scroll en los paneles */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 
-    <!-- DETECTOR DE ERRORES: Para que no se quede en blanco si algo falla -->
     <script>
         window.onerror = function(message, source, lineno, colno, error) {
             const root = document.getElementById('root');
             if(root) {
-                root.innerHTML = '<div style="background:#020617; color:#fca5a5; padding:20px; font-family:sans-serif; height:100vh; overflow:auto;">' +
+                root.innerHTML = '<div style="background:#020617; color:#fca5a5; padding:env(safe-area-inset-top) 20px 20px; font-family:sans-serif; height:100vh; overflow:auto;">' +
                     '<h2 style="color:white; font-weight:bold; font-size: 1.5rem;">¡Ups! Algo falló.</h2>' +
                     '<p style="margin-top: 10px;">Tómale captura a esto y mándalo al programador:</p>' +
                     '<div style="background:#000; padding:15px; border-radius:10px; margin-top:15px; font-family:monospace; border: 1px solid #334155;">' + message + '<br><br>Línea: ' + lineno + '</div>' +
@@ -39,10 +67,10 @@
         };
     </script>
 </head>
-<body class="bg-slate-950 text-white overflow-hidden select-none">
+<body class="bg-slate-950 text-slate-100 overflow-hidden select-none">
     
     <div id="root">
-        <div class="loading-text">Cargando la aventura... 🍻</div>
+        <div class="loading-text">Cargando experiencia... 🍻</div>
     </div>
 
     <script type="text/babel">
@@ -195,7 +223,6 @@
           const lastPosition = useRef({ x: 0, y: 0 });
           const pinchStartDist = useRef(null);
           const pinchStartScale = useRef(null);
-          const containerRef = useRef(null);
 
           const calculateScore = () => {
             let score = 0;
@@ -211,25 +238,18 @@
           };
           const currentScore = calculateScore();
 
+          // LÓGICA DE PANEO INFINITO RELAJADO (Resuelve el problema rectangular)
           const getConstrainedTransform = (newX, newY, newScale) => {
-            const MAP_SIZE = 1000;
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
+            // El mapa de fondo ahora es enorme (2000x2000)
+            const MIN_SCALE = 0.3; // Permite alejar más
+            const MAX_SCALE = 5;
+            const constrainedScale = Math.max(MIN_SCALE, Math.min(newScale, MAX_SCALE));
 
-            const minScaleW = vw / MAP_SIZE;
-            const minScaleH = vh / MAP_SIZE;
+            // Relajamos los bordes: Permitimos salirnos hasta 800px del centro para que se sienta dinámico en cualquier teléfono
+            const maxPan = 800 * constrainedScale; 
             
-            const absMinScale = Math.max(minScaleW, minScaleH) * 1.1; 
-            const constrainedScale = Math.max(absMinScale, Math.min(newScale, 8));
-
-            const finalScaledW = MAP_SIZE * constrainedScale;
-            const finalScaledH = MAP_SIZE * constrainedScale;
-
-            const maxDX = (finalScaledW - vw) / 2;
-            const maxDY = (finalScaledH - vh) / 2;
-
-            const constrainedX = Math.max(-maxDX, Math.min(newX, maxDX));
-            const constrainedY = Math.max(-maxDY, Math.min(newY, maxDY));
+            const constrainedX = Math.max(-maxPan, Math.min(newX, maxPan));
+            const constrainedY = Math.max(-maxPan, Math.min(newY, maxPan));
 
             return { x: constrainedX, y: constrainedY, scale: constrainedScale };
           };
@@ -247,11 +267,14 @@
           };
 
           const centerOnBar = (bar) => {
-            const targetScale = 2.5;
+            const targetScale = 2.0;
+            // Los pines viven en un sub-contenedor de 1000x1000 en el centro del mundo de 2000x2000
             const mapDX = ((bar.lng - 50) / 100) * 1000;
             const mapDY = ((bar.lat - 50) / 100) * 1000;
+            
             const targetX = -mapDX * targetScale;
             const targetY = -mapDY * targetScale;
+            
             const constrained = getConstrainedTransform(targetX, targetY, targetScale);
             setMapTransform(constrained);
             handlePinClick(bar);
@@ -390,20 +413,25 @@
           };
           
           const resetMap = () => {
-            const constrained = getConstrainedTransform(0, 0, 0); 
+            // Calcula escala ideal inicial basada en la pantalla
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const idealScale = Math.min(vw / 800, vh / 800);
+            
+            const constrained = getConstrainedTransform(0, 0, Math.max(idealScale, 0.4)); 
             setMapTransform(constrained);
           };
 
           const getLevelBadge = (level) => {
-            if (level === 1) return <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500 text-slate-950 uppercase shadow-[0_0_10px_rgba(16,185,129,0.4)]">Easy</span>;
-            if (level === 2) return <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-500 text-slate-950 uppercase shadow-[0_0_10px_rgba(245,158,11,0.4)]">Med</span>;
-            if (level === 3) return <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-600 text-white uppercase shadow-[0_0_10px_rgba(225,29,72,0.4)]">Hard</span>;
+            if (level === 1) return <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-400 text-emerald-950 uppercase shadow-[0_0_15px_rgba(52,211,153,0.5)]">Easy</span>;
+            if (level === 2) return <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-400 text-amber-950 uppercase shadow-[0_0_15px_rgba(251,191,36,0.5)]">Med</span>;
+            if (level === 3) return <span className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-500 text-white uppercase shadow-[0_0_15px_rgba(244,63,94,0.5)]">Hard</span>;
           };
 
           const getLevelColor = (level) => {
-            if (level === 1) return "text-emerald-400 border-emerald-400/50 bg-emerald-400/10";
-            if (level === 2) return "text-amber-400 border-amber-400/50 bg-amber-400/10";
-            if (level === 3) return "text-rose-500 border-rose-500/50 bg-rose-500/10";
+            if (level === 1) return "text-emerald-400 border-emerald-400/50 bg-emerald-900/20";
+            if (level === 2) return "text-amber-400 border-amber-400/50 bg-amber-900/20";
+            if (level === 3) return "text-rose-400 border-rose-500/50 bg-rose-900/20";
             return "text-slate-400";
           };
           
@@ -414,141 +442,159 @@
           }, []);
 
           return (
-            <div className="flex h-[100dvh] bg-slate-950 text-slate-100 font-sans overflow-hidden select-none">
+            <div className="flex h-screen w-screen bg-slate-950 text-slate-100 font-sans overflow-hidden select-none relative">
               
+              {/* --- HEADER SUPERIOR PREMIUM (GLASSMORPHISM & SAFE AREA) --- */}
+              {/* pt-[max(env(safe-area-inset-top),16px)] protege contra el notch del iPhone */}
+              <header className="fixed top-0 inset-x-0 z-40 glass-panel pt-[max(env(safe-area-inset-top),16px)] pb-3 px-4 flex justify-between items-center shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => setShowSidebar(true)}
+                    className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full border border-white/10 transition-colors shadow-sm text-cyan-400 active:scale-90"
+                  >
+                    <i className="fa-solid fa-bars" style={{fontSize: '18px'}}></i>
+                  </button>
+                  <div>
+                    <h1 className="text-xl font-black bg-gradient-to-r from-cyan-300 to-indigo-300 bg-clip-text text-transparent leading-none tracking-tighter drop-shadow-sm">
+                      BUDAPEST QUEST
+                    </h1>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10 shadow-inner">
+                  <i className="fa-solid fa-trophy text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]" style={{fontSize: '16px'}}></i>
+                  <div className="flex flex-col items-end leading-none">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Score</span>
+                    <span className="text-lg font-black text-white">{currentScore}</span>
+                  </div>
+                </div>
+              </header>
+
+              {/* --- SIDEBAR MENU --- */}
               <div className={`
-                fixed inset-y-0 left-0 z-50 bg-slate-900 border-r border-slate-800 transition-transform duration-300 shadow-2xl flex flex-col w-full md:w-80
+                fixed inset-y-0 left-0 z-50 glass-panel border-r border-white/10 transition-transform duration-300 shadow-2xl flex flex-col w-full md:w-80
                 ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
               `}>
-                <div className="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center flex-none">
+                <div className="pt-[max(env(safe-area-inset-top),16px)] pb-4 px-4 border-b border-white/10 flex justify-between items-center flex-none">
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <i className="fa-solid fa-list text-cyan-400" style={{fontSize: '20px'}}></i> Bar List
+                    <i className="fa-solid fa-list text-cyan-400"></i> Bar List
                   </h2>
-                  <button onClick={() => setShowSidebar(false)} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 text-slate-300">
-                    <i className="fa-solid fa-xmark" style={{fontSize: '20px'}}></i>
+                  <button onClick={() => setShowSidebar(false)} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-300 active:scale-90 transition-all">
+                    <i className="fa-solid fa-xmark"></i>
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto bg-slate-900 p-2 space-y-2">
+                <div className="flex-1 overflow-y-auto p-3 space-y-2 pb-[env(safe-area-inset-bottom)]">
                   {INITIAL_BARS.map(bar => {
                     const unlocked = isUnlocked(bar.id);
                     return (
                       <button 
                         key={bar.id}
                         onClick={() => centerOnBar(bar)}
-                        className={`w-full text-left p-3 rounded-lg border transition-all flex items-center justify-between group
+                        className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group shadow-sm active:scale-[0.98]
                           ${isCompleted(bar.id) 
-                            ? 'border-emerald-500/30 bg-emerald-900/20 hover:bg-emerald-900/30' 
+                            ? 'border-emerald-500/40 bg-emerald-900/30' 
                             : unlocked 
-                              ? 'border-slate-800 bg-slate-800 hover:bg-slate-700'
-                              : 'border-slate-800/50 bg-slate-900 hover:bg-slate-800 opacity-70'
+                              ? 'border-white/10 bg-slate-800/50'
+                              : 'border-white/5 bg-slate-900/50 opacity-60'
                           }
-                          ${activeBar?.id === bar.id ? 'ring-1 ring-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.15)]' : ''}
+                          ${activeBar?.id === bar.id ? 'ring-2 ring-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.3)]' : ''}
                         `}
                       >
                         <div>
-                          <div className="font-bold text-sm text-slate-200 flex items-center gap-2">
-                            {unlocked ? bar.name : <span className="flex items-center gap-1.5"><i className="fa-solid fa-lock" style={{fontSize: '12px'}}></i> Locked Location</span>}
+                          <div className="font-bold text-[15px] text-slate-100 flex items-center gap-2">
+                            {unlocked ? bar.name : <span className="flex items-center gap-1.5"><i className="fa-solid fa-lock text-slate-500 text-xs"></i> Locked Location</span>}
                           </div>
                           {unlocked && (
-                            <div className="text-xs text-slate-400 flex gap-2 mt-1 items-center">
+                            <div className="text-xs text-slate-400 flex gap-2 mt-1.5 items-center">
                               {getLevelBadge(bar.challenge.level)}
-                              <span>{bar.challenge.points * 100} pts</span>
+                              <span className="font-medium text-slate-300">{bar.challenge.points * 100} pts</span>
                             </div>
                           )}
                         </div>
-                        {isCompleted(bar.id) && <i className="fa-solid fa-circle-check text-emerald-500" style={{fontSize: '18px'}}></i>}
+                        {isCompleted(bar.id) && <i className="fa-solid fa-circle-check text-emerald-400 shadow-emerald-500 drop-shadow-md text-xl"></i>}
                       </button>
                     )
                   })}
-                  <div className="h-20"></div>
                 </div>
               </div>
 
-              <div className="flex-1 flex flex-col relative h-full bg-slate-950">
-                <header className="flex-none z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 p-3 flex justify-between items-center shadow-lg">
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => setShowSidebar(true)}
-                      className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors shadow-sm flex items-center gap-2 text-slate-300"
-                    >
-                      <i className="fa-solid fa-bars text-cyan-400" style={{fontSize: '20px'}}></i>
-                      <span className="text-sm font-bold md:hidden">Menu</span>
-                    </button>
-                    <div>
-                      <h1 className="text-lg font-black bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent leading-none tracking-tighter">
-                        BUDAPEST QUEST
-                      </h1>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700">
-                    <i className="fa-solid fa-trophy text-yellow-400" style={{fontSize: '16px'}}></i>
-                    <div className="flex flex-col items-end leading-none">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">Score</span>
-                      <span className="text-lg font-black text-white">{currentScore}</span>
-                    </div>
-                  </div>
-                </header>
-
+              {/* --- VIEWPORT DEL MAPA INFINITO --- */}
+              <div 
+                className="flex-1 relative w-full h-full bg-radar overflow-hidden cursor-move touch-none"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onWheel={handleWheel}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
+                {/* Contenedor del Transform */}
                 <div 
-                  ref={containerRef}
-                  className="flex-1 relative bg-slate-950 overflow-hidden cursor-move touch-none"
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseUp}
-                  onWheel={handleWheel}
-                  onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
+                  style={{ 
+                    transform: `translate(${mapTransform.x}px, ${mapTransform.y}px) scale(${mapTransform.scale})`,
+                    transformOrigin: 'center',
+                    transition: isDragging.current ? 'none' : 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                    width: '100%',
+                    height: '100%'
+                  }}
+                  className="absolute top-0 left-0 flex items-center justify-center"
                 >
-                  <div 
-                    style={{ 
-                      transform: `translate(${mapTransform.x}px, ${mapTransform.y}px) scale(${mapTransform.scale})`,
-                      transformOrigin: 'center',
-                      transition: isDragging.current ? 'none' : 'transform 0.15s cubic-bezier(0.1, 0.6, 0.1, 1)',
-                      width: '100%',
-                      height: '100%'
-                    }}
-                    className="absolute top-0 left-0 flex items-center justify-center"
-                  >
-                    <div className="relative w-[1000px] h-[1000px] bg-slate-950 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
-                      <svg viewBox="0 0 1000 1000" className="absolute inset-0 w-full h-full">
-                        <defs>
-                          <pattern id="smallGrid" width="50" height="50" patternUnits="userSpaceOnUse">
-                            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#1e293b" strokeWidth="1" opacity="0.8"/>
-                          </pattern>
-                          <pattern id="grid" width="200" height="200" patternUnits="userSpaceOnUse">
-                            <rect width="200" height="200" fill="url(#smallGrid)"/>
-                            <path d="M 200 0 L 0 0 0 200" fill="none" stroke="#334155" strokeWidth="2" opacity="0.8"/>
-                          </pattern>
-                        </defs>
-                        <rect width="1000" height="1000" fill="url(#grid)" />
-                        <line x1="500" y1="0" x2="500" y2="1000" stroke="#0ea5e9" strokeWidth="2" opacity="0.3" strokeDasharray="20,10"/>
-                        <line x1="0" y1="500" x2="1000" y2="500" stroke="#0ea5e9" strokeWidth="2" opacity="0.3" strokeDasharray="20,10"/>
-                        <text x="500" y="50" textAnchor="middle" fill="#0ea5e9" fontSize="60" fontWeight="black" opacity="0.9">N</text>
-                        <text x="500" y="980" textAnchor="middle" fill="#475569" fontSize="60" fontWeight="black" opacity="0.5">S</text>
-                        <text x="960" y="520" textAnchor="end" fill="#475569" fontSize="60" fontWeight="black" opacity="0.5">E</text>
-                        <text x="40" y="520" textAnchor="start" fill="#475569" fontSize="60" fontWeight="black" opacity="0.5">W</text>
-                        <circle cx="500" cy="500" r="150" fill="none" stroke="#334155" strokeWidth="2" strokeDasharray="10,10" opacity="0.5"/>
-                        <circle cx="500" cy="500" r="300" fill="none" stroke="#334155" strokeWidth="2" strokeDasharray="10,10" opacity="0.5"/>
-                        <circle cx="500" cy="500" r="450" fill="none" stroke="#334155" strokeWidth="2" strokeDasharray="10,10" opacity="0.5"/>
-                      </svg>
+                  {/* MUNDO INFINITO (2000x2000) */}
+                  <div className="relative w-[2000px] h-[2000px]">
+                    
+                    {/* SVG DE FONDO CIBERNÉTICO */}
+                    <svg viewBox="0 0 2000 2000" className="absolute inset-0 w-full h-full">
+                      <defs>
+                        <pattern id="smallGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+                          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#0ea5e9" strokeWidth="0.5" opacity="0.15"/>
+                        </pattern>
+                        <pattern id="grid" width="200" height="200" patternUnits="userSpaceOnUse">
+                          <rect width="200" height="200" fill="url(#smallGrid)"/>
+                          <path d="M 200 0 L 0 0 0 200" fill="none" stroke="#0ea5e9" strokeWidth="1" opacity="0.3"/>
+                        </pattern>
+                        {/* Brillo central */}
+                        <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+                          <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.1"/>
+                          <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/>
+                        </radialGradient>
+                      </defs>
+                      <rect width="2000" height="2000" fill="url(#grid)" />
+                      <circle cx="1000" cy="1000" r="800" fill="url(#centerGlow)"/>
+
+                      {/* Ejes de Cruz central */}
+                      <line x1="1000" y1="200" x2="1000" y2="1800" stroke="#38bdf8" strokeWidth="2" opacity="0.4" strokeDasharray="15,15"/>
+                      <line x1="200" y1="1000" x2="1800" y2="1000" stroke="#38bdf8" strokeWidth="2" opacity="0.4" strokeDasharray="15,15"/>
                       
+                      {/* Letras Cardinales Fancy */}
+                      <text x="1000" y="250" textAnchor="middle" fill="#38bdf8" fontSize="80" fontWeight="black" opacity="0.6" letterSpacing="5">NORTH</text>
+                      <text x="1000" y="1800" textAnchor="middle" fill="#475569" fontSize="60" fontWeight="black" opacity="0.4">SOUTH</text>
+                      <text x="1750" y="1025" textAnchor="end" fill="#475569" fontSize="60" fontWeight="black" opacity="0.4">EAST</text>
+                      <text x="250" y="1025" textAnchor="start" fill="#475569" fontSize="60" fontWeight="black" opacity="0.4">WEST</text>
+
+                      {/* Círculos Radar */}
+                      <circle cx="1000" cy="1000" r="300" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeDasharray="4,8" opacity="0.4"/>
+                      <circle cx="1000" cy="1000" r="600" fill="none" stroke="#0ea5e9" strokeWidth="1" strokeDasharray="8,16" opacity="0.3"/>
+                    </svg>
+
+                    {/* ZONA DE JUEGO (1000x1000 centrado) DONDE VAN LOS PINES */}
+                    <div className="absolute left-1/2 top-1/2 w-[1000px] h-[1000px] -translate-x-1/2 -translate-y-1/2">
                       {INITIAL_BARS.map((bar) => {
                         const unlocked = isUnlocked(bar.id);
                         const completed = isCompleted(bar.id);
                         const active = activeBar?.id === bar.id || activeQuestionBar?.id === bar.id;
                         
-                        let pinColorClass = "text-emerald-400";
-                        if (bar.challenge.level === 2) pinColorClass = "text-amber-400";
-                        if (bar.challenge.level === 3) pinColorClass = "text-rose-500";
-                        if (completed) pinColorClass = "text-white";
-                        if (!unlocked) pinColorClass = "text-slate-500";
+                        let pinColorClass = "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]";
+                        let borderColorClass = "border-emerald-400";
+                        if (bar.challenge.level === 2) { pinColorClass = "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]"; borderColorClass = "border-amber-400"; }
+                        if (bar.challenge.level === 3) { pinColorClass = "text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]"; borderColorClass = "border-rose-400"; }
+                        
+                        if (completed) pinColorClass = "text-white drop-shadow-[0_0_5px_white]";
+                        if (!unlocked) pinColorClass = "text-slate-400";
 
-                        const baseSize = 1; 
-                        const inverseScale = baseSize / mapTransform.scale; 
+                        const inverseScale = 1 / mapTransform.scale; 
 
                         return (
                           <button
@@ -558,35 +604,40 @@
                             style={{ 
                               top: `${bar.lat}%`, 
                               left: `${bar.lng}%`,
-                              transform: `translate(-50%, -50%) scale(${active ? inverseScale * 1.5 : inverseScale})` 
+                              transform: `translate(-50%, -50%) scale(${active ? inverseScale * 1.3 : inverseScale})` 
                             }}
                           >
                             <div className="p-6 -m-6 flex flex-col items-center">
                               <div className="relative flex flex-col items-center">
+                                
+                                {/* Label del Pin Fancy */}
                                 <span className={`
-                                  whitespace-nowrap px-2 py-1 bg-slate-800 text-slate-100 text-xs font-bold rounded shadow-lg border border-slate-600 mb-2
-                                  ${active || (unlocked && mapTransform.scale > 2) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity pointer-events-none
+                                  whitespace-nowrap px-3 py-1.5 glass-panel text-white text-[13px] font-black tracking-wide rounded-lg shadow-2xl mb-3 pointer-events-none
+                                  ${active || (unlocked && mapTransform.scale > 1.5) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'} 
+                                  transition-all duration-300
                                 `}>
-                                  {unlocked ? bar.name : "???"}
+                                  {unlocked ? bar.name : "SECRET"}
                                 </span>
 
-                                {unlocked && (
-                                  <div className={`
-                                    absolute inset-0 rounded-full blur-xl opacity-60
-                                    ${completed ? 'bg-emerald-500' : 'bg-cyan-500'}
-                                  `}></div>
+                                {/* Glow Dinámico para pines desbloqueados */}
+                                {unlocked && !completed && (
+                                  <div className={`absolute inset-0 rounded-full blur-xl opacity-80 animate-pulse ${bar.challenge.level === 1 ? 'bg-emerald-500' : bar.challenge.level === 2 ? 'bg-amber-500' : 'bg-rose-500'}`}></div>
+                                )}
+                                {completed && (
+                                  <div className="absolute inset-0 rounded-full blur-xl bg-emerald-500 opacity-80"></div>
                                 )}
 
+                                {/* Cuerpo del Pin */}
                                 <div className={`
-                                  relative w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-[0_0_20px_rgba(0,0,0,0.5)]
-                                  ${active ? 'bg-slate-900 border-cyan-400 scale-110' : 'bg-slate-900 border-slate-500'}
-                                  ${completed ? 'bg-emerald-600 border-emerald-400' : ''}
-                                  ${!unlocked ? 'bg-slate-800 border-slate-600' : ''}
+                                  relative w-14 h-14 rounded-full flex items-center justify-center border-2 shadow-[0_10px_25px_rgba(0,0,0,0.8)] backdrop-blur-md
+                                  ${active ? `bg-slate-900 ${borderColorClass} scale-110` : 'bg-slate-900/80 border-slate-600'}
+                                  ${completed ? 'bg-emerald-500 border-white' : ''}
+                                  ${!unlocked ? 'bg-slate-800/90 border-slate-700' : ''}
                                 `}>
                                   {unlocked ? (
-                                    completed ? <i className="fa-solid fa-circle-check text-white" style={{fontSize: '24px'}}></i> : <i className={`fa-solid fa-location-dot ${pinColorClass}`} style={{fontSize: '24px'}}></i>
+                                    completed ? <i className="fa-solid fa-check text-white text-2xl font-black"></i> : <i className={`fa-solid fa-location-dot ${pinColorClass} text-2xl`}></i>
                                   ) : (
-                                    <i className="fa-solid fa-lock text-slate-500" style={{fontSize: '20px'}}></i>
+                                    <i className="fa-solid fa-lock text-slate-400 text-xl"></i>
                                   )}
                                 </div>
                               </div>
@@ -596,40 +647,43 @@
                       })}
                     </div>
                   </div>
-
-                  <div className="absolute right-4 bottom-24 flex flex-col gap-3 z-30">
-                    <button onClick={zoomIn} className="p-3 bg-slate-800/90 text-slate-200 rounded-full shadow-lg border border-slate-600 active:bg-slate-700 backdrop-blur-sm"><i className="fa-solid fa-plus" style={{fontSize: '24px'}}></i></button>
-                    <button onClick={zoomOut} className="p-3 bg-slate-800/90 text-slate-200 rounded-full shadow-lg border border-slate-600 active:bg-slate-700 backdrop-blur-sm"><i className="fa-solid fa-minus" style={{fontSize: '24px'}}></i></button>
-                    <button onClick={resetMap} className="p-3 bg-slate-800/90 text-slate-200 rounded-full shadow-lg border border-slate-600 active:bg-slate-700 backdrop-blur-sm"><i className="fa-regular fa-compass" style={{fontSize: '24px'}}></i></button>
-                  </div>
-                  
-                  <button 
-                    onClick={() => setShowExtras(true)}
-                    className="absolute bottom-6 right-4 left-4 z-40 bg-gradient-to-r from-cyan-600 to-blue-600 text-white px-5 py-3.5 rounded-2xl font-bold shadow-[0_0_20px_rgba(8,145,178,0.4)] border border-white/10 flex items-center justify-center gap-2 active:scale-95 transition-transform"
-                  >
-                    <i className="fa-solid fa-list" style={{fontSize: '20px'}}></i>
-                    Extra Missions
-                  </button>
                 </div>
+
+                {/* --- CONTROLES FLOTANTES PREMIUM (Ajustados al Safe Area Bottom) --- */}
+                <div className="absolute right-4 bottom-[max(env(safe-area-inset-bottom,24px),24px)] flex flex-col gap-3 z-30">
+                  <button onClick={zoomIn} className="w-12 h-12 flex items-center justify-center glass-panel text-white rounded-full shadow-2xl active:scale-90 transition-transform"><i className="fa-solid fa-plus text-xl"></i></button>
+                  <button onClick={zoomOut} className="w-12 h-12 flex items-center justify-center glass-panel text-white rounded-full shadow-2xl active:scale-90 transition-transform"><i className="fa-solid fa-minus text-xl"></i></button>
+                  <button onClick={resetMap} className="w-12 h-12 flex items-center justify-center glass-panel text-cyan-400 rounded-full shadow-2xl active:scale-90 transition-transform"><i className="fa-solid fa-crosshairs text-xl"></i></button>
+                </div>
+                
+                {/* EXTRA MISSIONS BUTTON */}
+                <button 
+                  onClick={() => setShowExtras(true)}
+                  className="absolute bottom-[max(env(safe-area-inset-bottom,24px),24px)] left-4 right-20 z-40 bg-gradient-to-r from-cyan-600 to-indigo-600 text-white px-5 py-4 rounded-full font-black text-[15px] tracking-wide shadow-[0_10px_30px_rgba(8,145,178,0.5)] border border-white/20 flex items-center justify-center gap-3 active:scale-95 transition-transform"
+                >
+                  <i className="fa-solid fa-bolt text-yellow-300 drop-shadow-md text-lg"></i>
+                  EXTRA MISSIONS
+                </button>
               </div>
 
+              {/* --- MODAL: PREGUNTA (GLASSMORPHISM) --- */}
               {activeQuestionBar && (
-                <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm p-4 flex items-center justify-center">
-                  <div className="bg-slate-900 w-full max-w-sm rounded-2xl flex flex-col shadow-2xl overflow-hidden border border-slate-700 relative animate-in zoom-in-95 duration-200">
-                    <button onClick={() => setActiveQuestionBar(null)} className="absolute top-3 right-3 p-2 text-slate-500 hover:text-white"><i className="fa-solid fa-xmark" style={{fontSize: '20px'}}></i></button>
+                <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-md p-4 flex items-center justify-center">
+                  <div className="glass-panel w-full max-w-sm rounded-[2rem] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-white/10 relative animate-in zoom-in-95 duration-300">
+                    <button onClick={() => setActiveQuestionBar(null)} className="absolute top-4 right-4 w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-300"><i className="fa-solid fa-xmark text-lg"></i></button>
 
-                    <div className="p-6">
-                      <div className="flex justify-center mb-4">
-                        <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center border-2 border-slate-600">
-                          <i className="fa-solid fa-circle-question text-cyan-400" style={{fontSize: '32px'}}></i>
+                    <div className="p-8">
+                      <div className="flex justify-center mb-6">
+                        <div className="w-20 h-20 rounded-full bg-slate-900 border-2 border-cyan-500 shadow-[0_0_30px_rgba(6,182,212,0.4)] flex items-center justify-center">
+                          <i className="fa-solid fa-unlock-keyhole text-cyan-400 text-3xl"></i>
                         </div>
                       </div>
 
-                      <h3 className="text-center text-xl font-bold text-white mb-2">Discovery Challenge</h3>
-                      <p className="text-center text-slate-400 text-sm mb-6">Answer correctly to reveal this location!</p>
+                      <h3 className="text-center text-2xl font-black text-white mb-2 tracking-tight">Access Code</h3>
+                      <p className="text-center text-slate-400 text-sm mb-8 font-medium">Solve the riddle to reveal the bar.</p>
 
-                      <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4">
-                         <p className="text-center font-medium text-slate-200">{activeQuestionBar.trivia.q}</p>
+                      <div className="bg-slate-900/80 p-5 rounded-2xl border border-white/5 mb-6 shadow-inner">
+                         <p className="text-center font-bold text-slate-200 text-[15px] leading-relaxed">{activeQuestionBar.trivia.q}</p>
                       </div>
 
                       <form onSubmit={submitAnswer} className="space-y-4">
@@ -638,20 +692,20 @@
                             type="text" 
                             value={answerInput}
                             onChange={(e) => { setAnswerInput(e.target.value); setAnswerError(false); }}
-                            placeholder="Type your answer..."
-                            className={`w-full bg-slate-950 border text-center text-lg font-bold p-3 rounded-xl outline-none focus:ring-2 transition-all
-                              ${answerError ? 'border-red-500 text-red-500 focus:ring-red-500/50' : 'border-slate-700 text-white focus:ring-cyan-500/50 focus:border-cyan-500'}
+                            placeholder="Your answer..."
+                            className={`w-full bg-slate-950/50 border-2 text-center text-xl font-bold p-4 rounded-2xl outline-none transition-all shadow-inner
+                              ${answerError ? 'border-rose-500/80 text-rose-400 focus:bg-rose-950/20' : 'border-white/10 text-white focus:border-cyan-500 focus:bg-cyan-950/10'}
                             `}
                             autoFocus
                           />
-                          {answerError && <p className="text-red-500 text-xs text-center mt-2 font-bold">Incorrect! Try again.</p>}
+                          {answerError && <p className="text-rose-400 text-xs text-center mt-3 font-bold uppercase tracking-wider animate-bounce">Incorrect! Try again.</p>}
                         </div>
                         
                         <button 
                           type="submit"
-                          className="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition-all"
+                          className="w-full py-4 mt-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black text-lg rounded-2xl shadow-[0_10px_20px_rgba(6,182,212,0.4)] active:scale-95 transition-all flex items-center justify-center gap-2 tracking-wide"
                         >
-                          <span className="flex items-center justify-center gap-2"><i className="fa-solid fa-lock-open" style={{fontSize: '18px'}}></i> UNLOCK LOCATION</span>
+                          DECRYPT <i className="fa-solid fa-fingerprint"></i>
                         </button>
                       </form>
                     </div>
@@ -659,35 +713,38 @@
                 </div>
               )}
 
+              {/* --- MODAL: EXTRA MISSIONS --- */}
               {showExtras && (
-                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 flex items-center justify-center">
-                  <div className="bg-slate-900 w-full max-w-md h-[80vh] rounded-2xl flex flex-col shadow-2xl overflow-hidden border border-slate-700">
-                    <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
-                      <h2 className="text-xl font-bold text-white">Extra Missions</h2>
-                      <button onClick={() => setShowExtras(false)} className="p-2 bg-slate-800 border border-slate-700 rounded-full hover:bg-slate-700 text-slate-400"><i className="fa-solid fa-xmark" style={{fontSize: '20px'}}></i></button>
+                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+                  <div className="glass-panel w-full sm:max-w-md h-[85vh] sm:h-[80vh] rounded-t-[2.5rem] sm:rounded-[2.5rem] flex flex-col shadow-2xl border-t sm:border border-white/10 animate-in slide-in-from-bottom sm:zoom-in duration-300">
+                    <div className="p-6 border-b border-white/5 flex justify-between items-center relative">
+                      <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full sm:hidden"></div>
+                      <h2 className="text-2xl font-black text-white tracking-tight mt-2 sm:mt-0">Extra Missions</h2>
+                      <button onClick={() => setShowExtras(false)} className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-300 mt-2 sm:mt-0"><i className="fa-solid fa-xmark"></i></button>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-900">
+                    
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-[max(env(safe-area-inset-bottom),24px)]">
                       {EXTRA_CHALLENGES.map((ch) => {
                         const isDone = userState.extraCompleted.includes(ch.id);
                         return (
                           <div 
                             key={ch.id} 
                             onClick={() => toggleExtraChallenge(ch.id)}
-                            className={`p-4 rounded-xl border transition-all cursor-pointer relative overflow-hidden shadow-sm
-                              ${isDone ? 'bg-emerald-900/20 border-emerald-500/50' : 'bg-slate-800 border-slate-700 hover:border-cyan-500/50'}
+                            className={`p-5 rounded-3xl border transition-all cursor-pointer relative shadow-sm active:scale-[0.98]
+                              ${isDone ? 'bg-emerald-900/20 border-emerald-500/40' : 'bg-slate-900/60 border-white/5 hover:border-cyan-500/50'}
                             `}
                           >
-                            <div className="flex items-start gap-3 relative z-10">
-                              <div className={`mt-0.5 w-6 h-6 rounded border flex items-center justify-center shrink-0 ${isDone ? 'bg-emerald-500 border-emerald-500' : 'border-slate-600 bg-slate-800'}`}>
-                                  {isDone && <i className="fa-solid fa-circle-check text-white" style={{fontSize: '14px'}}></i>}
+                            <div className="flex items-start gap-4">
+                              <div className={`mt-0.5 w-7 h-7 rounded-xl border-2 flex items-center justify-center shrink-0 shadow-inner transition-colors ${isDone ? 'bg-emerald-500 border-emerald-400' : 'border-slate-600 bg-slate-800'}`}>
+                                  {isDone && <i className="fa-solid fa-check text-white text-sm font-black"></i>}
                               </div>
                               <div>
-                                <div className="flex items-center gap-2 mb-1">
+                                <div className="flex items-center gap-2 mb-1.5">
                                   {getLevelBadge(ch.level)}
-                                  <span className={`text-xs font-bold ${isDone ? 'text-emerald-400' : 'text-slate-400'}`}>{ch.points * 100} pts</span>
+                                  <span className={`text-xs font-black ${isDone ? 'text-emerald-400' : 'text-slate-400'}`}>{ch.points * 100} PTS</span>
                                 </div>
-                                <h4 className={`font-bold text-sm ${isDone ? 'text-slate-500 line-through' : 'text-slate-200'}`}>{ch.text}</h4>
-                                <p className={`text-xs mt-1 leading-snug ${isDone ? 'text-slate-600' : 'text-slate-400'}`}>{ch.description}</p>
+                                <h4 className={`font-black text-[15px] leading-tight ${isDone ? 'text-slate-500 line-through' : 'text-slate-100'}`}>{ch.text}</h4>
+                                <p className={`text-[13px] mt-1.5 leading-relaxed ${isDone ? 'text-slate-600' : 'text-slate-400'}`}>{ch.description}</p>
                               </div>
                             </div>
                           </div>
@@ -698,49 +755,53 @@
                 </div>
               )}
 
+              {/* --- DRAWER: DETALLES DEL BAR (Safe Area Bottom) --- */}
               {activeBar && (
                 <div className="fixed inset-x-0 bottom-0 z-50 h-auto">
-                  <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px]" onClick={() => setActiveBar(null)}></div>
+                  <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setActiveBar(null)}></div>
                   
-                  <div className="bg-slate-900 border-t border-slate-700 rounded-t-3xl p-6 pb-8 shadow-[0_-10px_60px_rgba(0,0,0,0.8)] relative animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto">
-                    <button onClick={() => setActiveBar(null)} className="absolute top-4 right-4 p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white"><i className="fa-solid fa-xmark" style={{fontSize: '20px'}}></i></button>
+                  <div className="glass-panel border-t border-white/10 rounded-t-[2.5rem] p-6 pb-[max(env(safe-area-inset-bottom,32px),32px)] shadow-[0_-20px_50px_rgba(0,0,0,0.8)] relative animate-in slide-in-from-bottom duration-300 max-h-[85vh] overflow-y-auto">
+                    {/* Handle for mobile drawer */}
+                    <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full"></div>
+                    
+                    <button onClick={() => setActiveBar(null)} className="absolute top-6 right-6 w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-slate-300"><i className="fa-solid fa-xmark text-lg"></i></button>
 
-                    <div className="space-y-4 max-w-lg mx-auto pt-2">
+                    <div className="space-y-6 max-w-lg mx-auto pt-6">
                       <div>
-                        <h2 className="text-3xl font-black text-white leading-none">{activeBar.name}</h2>
-                        <div className="flex items-center gap-2 mt-2">
-                            <span className="px-2 py-0.5 rounded bg-slate-800 text-xs font-bold text-slate-400 border border-slate-700 uppercase tracking-widest">District VII</span>
+                        <h2 className="text-4xl font-black text-white leading-none tracking-tighter drop-shadow-md">{activeBar.name}</h2>
+                        <div className="flex items-center gap-3 mt-3">
+                            <span className="px-3 py-1 rounded-md bg-white/10 text-xs font-bold text-slate-300 border border-white/5 uppercase tracking-widest shadow-inner">District VII</span>
                             {getLevelBadge(activeBar.challenge.level)}
                         </div>
                       </div>
 
                       <div 
                         onClick={() => toggleChallenge(activeBar.id)}
-                        className={`cursor-pointer p-5 rounded-2xl border-2 transition-all active:scale-98 shadow-md relative overflow-hidden group
+                        className={`cursor-pointer p-6 rounded-[2rem] border-2 transition-all active:scale-[0.98] shadow-lg relative overflow-hidden group
                           ${isCompleted(activeBar.id) 
                             ? 'bg-emerald-900/30 border-emerald-500/50' 
-                            : getLevelColor(activeBar.challenge.level).replace('text-', 'border-').replace('bg-', 'hover:bg-')
+                            : getLevelColor(activeBar.challenge.level).replace('text-', 'border-')
                           }`}
                       >
                         <div className="flex items-start gap-4 relative z-10">
-                          <div className={`mt-1 w-12 h-12 rounded-full border-2 flex items-center justify-center flex-shrink-0 shadow-sm transition-colors
-                              ${isCompleted(activeBar.id) ? 'bg-emerald-500 border-emerald-500' : 'border-slate-500 bg-slate-800'}
+                          <div className={`w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0 shadow-inner transition-colors
+                              ${isCompleted(activeBar.id) ? 'bg-emerald-500 border-2 border-emerald-400' : 'border-2 border-white/10 bg-slate-900/80'}
                             `}
                           >
-                            {isCompleted(activeBar.id) ? <i className="fa-solid fa-circle-check text-white" style={{fontSize: '24px'}}></i> : <i className="fa-solid fa-bolt text-slate-400" style={{fontSize: '24px'}}></i>}
+                            {isCompleted(activeBar.id) ? <i className="fa-solid fa-check text-white text-2xl font-black"></i> : <i className="fa-solid fa-bolt text-slate-300 text-2xl"></i>}
                           </div>
                           <div>
-                            <h3 className="text-lg font-black tracking-tight flex items-center gap-2 text-white">
+                            <h3 className="text-xl font-black tracking-tight flex items-center gap-2 text-white">
                               CHALLENGE
-                              <span className="text-xs font-bold bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-slate-400">{activeBar.challenge.points * 100} PTS</span>
+                              <span className="text-xs font-black bg-slate-950/50 px-2 py-0.5 rounded-md border border-white/5 text-slate-300">{activeBar.challenge.points * 100} PTS</span>
                             </h3>
-                            <p className="font-bold text-base mt-1 leading-snug text-slate-300">{activeBar.challenge.text}</p>
-                            <p className="mt-1 text-sm leading-relaxed text-slate-500">{activeBar.challenge.description}</p>
+                            <p className="font-bold text-[15px] mt-1.5 leading-snug text-slate-200">{activeBar.challenge.text}</p>
+                            <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{activeBar.challenge.description}</p>
                             
-                            <div className={`mt-3 text-[10px] font-bold uppercase tracking-wider py-1.5 px-3 rounded-lg inline-block transition-colors
-                              ${isCompleted(activeBar.id) ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-500 group-hover:bg-slate-700'}
+                            <div className={`mt-4 text-[11px] font-black uppercase tracking-widest py-2 px-4 rounded-xl inline-block transition-colors shadow-inner
+                              ${isCompleted(activeBar.id) ? 'bg-emerald-500 text-white' : 'bg-slate-950/50 text-slate-300 group-hover:bg-slate-900'}
                             `}>
-                              {isCompleted(activeBar.id) ? '✓ MISSION COMPLETE' : 'TAP TO COMPLETE'}
+                              {isCompleted(activeBar.id) ? 'MISSION COMPLETE' : 'TAP TO MARK AS DONE'}
                             </div>
                           </div>
                         </div>
@@ -750,10 +811,10 @@
                         href={activeBar.link} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 w-full py-4 bg-cyan-600 text-white hover:bg-cyan-500 rounded-xl font-black uppercase tracking-wide transition-all shadow-[0_0_20px_rgba(8,145,178,0.3)] active:scale-95 text-sm"
+                        className="flex items-center justify-center gap-3 w-full py-4.5 h-14 bg-white text-slate-950 hover:bg-slate-200 rounded-[1.5rem] font-black uppercase tracking-wide transition-all shadow-[0_10px_20px_rgba(255,255,255,0.1)] active:scale-95 text-[15px]"
                       >
-                        <i className="fa-solid fa-location-dot text-white" style={{fontSize: '18px'}}></i> 
-                        <span>Open in Google Maps</span>
+                        <i className="fa-solid fa-location-arrow text-lg"></i> 
+                        <span>Open in Maps</span>
                       </a>
                     </div>
                   </div>
@@ -761,8 +822,8 @@
               )}
 
               {showConfetti && (
-                <div className="fixed inset-0 pointer-events-none z-[100] flex justify-center items-center">
-                   <div className="text-8xl animate-bounce drop-shadow-[0_0_25px_rgba(255,255,255,0.5)]">🍻</div>
+                <div className="fixed inset-0 pointer-events-none z-[100] flex justify-center items-center backdrop-blur-sm bg-slate-950/20">
+                   <div className="text-[120px] animate-bounce drop-shadow-[0_0_50px_rgba(255,255,255,0.8)] filter">🍻</div>
                 </div>
               )}
 
@@ -770,13 +831,12 @@
           );
         };
 
-        // Renderizado directo, sin esperar eventos porque Babel ya lo hace seguro
         const rootElement = document.getElementById('root');
         if(window.React && window.ReactDOM) {
             const root = ReactDOM.createRoot(rootElement);
             root.render(<App />);
         } else {
-            rootElement.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>Error grave: No hay internet o las librerías están bloqueadas.</h2>";
+            rootElement.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>Error: Libraries didn't load.</h2>";
         }
     </script>
 </body>
