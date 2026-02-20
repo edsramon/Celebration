@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Budapest Quest</title>
+    
+    <!-- Cargamos Tailwind CSS para el diseño -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Cargamos FontAwesome para los íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Cargamos React (Servidores de alta disponibilidad, sin restricción CORS) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- Cargamos Babel para compilar en el navegador -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
+
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #020617; }
+        * { touch-action: manipulation; }
+        #root { width: 100vw; height: 100vh; }
+        .loading-text { color: #38bdf8; text-align: center; margin-top: 40vh; font-family: sans-serif; font-weight: bold; font-size: 1.2rem; }
+    </style>
+
+    <!-- DETECTOR DE ERRORES: Para que no se quede en blanco si algo falla -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const root = document.getElementById('root');
+            if(root) {
+                root.innerHTML = '<div style="background:#450a0a; color:#fca5a5; padding:20px; font-family:sans-serif; height:100vh; overflow:auto;">' +
+                    '<h2 style="color:white;">¡Ups! Algo falló en tu navegador.</h2>' +
+                    '<p>Por favor, tómale foto a este error y mándaselo al programador:</p>' +
+                    '<div style="background:#000; padding:10px; border-radius:5px; margin-top:10px; font-family:monospace;">' + message + '<br>Línea: ' + lineno + '</div>' +
+                '</div>';
+            }
+        };
+    </script>
+</head>
+<body class="bg-slate-950 text-white overflow-hidden select-none">
+    
+    <div id="root">
+        <div class="loading-text">Cargando la aventura... 🍻</div>
+    </div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        // --- DATA & CONFIGURATION ---
+        const ALL_CHALLENGES = [
+          { id: 'c1', text: "The Reverse Chug", description: "Drink your entire beer or shot while leaning backwards (limbo style) or using a straw. No spilling allowed!", points: 1, level: 1 },
+          { id: 'c2', text: "The Fanboy", description: "Approach a stranger, ask for their autograph on a napkin, and act overly excited like they are a famous celebrity.", points: 1, level: 1 },
+          { id: 'c3', text: "The Dark Ritual", description: "Gather your team around 'The Egg' (or a central object) and perform a silent, spooky ritual for 30 seconds.", points: 1, level: 1 },
+          { id: 'c4', text: "RPS Champion", description: "Challenge a stranger to Rock-Paper-Scissors. You must win 2 out of 3 rounds to claim this point.", points: 1, level: 1 },
+          { id: 'c5', text: "Poison Shot", description: "Ask the bartender for the weirdest or most unpopular shot they have and drink it without making a face.", points: 1, level: 1 },
+          { id: 'c6', text: "Lipstick Jungle", description: "Wear bright red/pink lipstick for the next 30 minutes inside the bar. (Yes, the guys too!).", points: 1, level: 1 },
+          { id: 'c7', text: "Call Me Maybe", description: "Write a fake number on a napkin, have the waiter deliver it to another table, and wave at them mysteriously.", points: 1, level: 1 },
+          { id: 'c8', text: "The TP Tail", description: "Tuck a long strip of toilet paper into your pants and walk proudly across the entire bar with your 'tail'.", points: 1, level: 1 },
+          
+          { id: 'c9', text: "The Bartender", description: "Charm the bartender! Successfully get their Instagram handle or phone number.", points: 2, level: 2 },
+          { id: 'c10', text: "Free Loader", description: "Hustle a free drink or shot from anyone who is NOT on your team (staff or stranger).", points: 2, level: 2 },
+          { id: 'c11', text: "Holy Egg", description: "Convince a total stranger to kiss 'The Egg' (or a specific statue/decoration in the bar).", points: 2, level: 2 },
+          { id: 'c12', text: "The Preacher", description: "Stand on a chair (or safe spot) and preach the religion of the 'Birthday God' to a group of strangers for 1 minute.", points: 2, level: 2 },
+          { id: 'c13', text: "Chug Buddy", description: "Challenge a stranger to a chug contest. You must both finish your drinks. (Win or lose, you get the points).", points: 2, level: 2 },
+          { id: 'c14', text: "Old Friends", description: "Walk up to a stranger and pretend you know them from high school. Keep the conversation going for 60 seconds.", points: 2, level: 2 },
+          { id: 'c15', text: "Look Ma No Hands", description: "Take a shot without using your hands. It must be sitting on the table or fed to you by a teammate.", points: 2, level: 2 },
+          { id: 'c16', text: "Marry Me", description: "Get down on one knee and stage a loud, fake marriage proposal to a teammate in the middle of the crowd.", points: 2, level: 2 },
+          { id: 'c17', text: "Domestic Drama", description: "Stage a fake couple's argument with a teammate. Bonus points if it ends with a (gentle) slap or drink splash.", points: 2, level: 2 },
+          { id: 'c18', text: "Blessing", description: "Politely ask a stranger to kiss you on the forehead as a 'blessing' for your journey.", points: 2, level: 2 },
+          { id: 'c19', text: "Stare Down", description: "Challenge a stranger to a staring contest. You must be less than 10cm away. First to laugh loses.", points: 2, level: 2 },
+          { id: 'c20', text: "Digits", description: "Successfully ask a stranger for their real phone number.", points: 2, level: 2 },
+          
+          { id: 'c21', text: "The Beggar", description: "Convince a stranger to give you a bite of their food or a sip of their drink (No stealing!).", points: 3, level: 3 },
+          { id: 'c22', text: "The Bat", description: "Drink a shot while being held upside down by your teammates.", points: 3, level: 3 },
+          { id: 'c23', text: "Cheerleader", description: "Build a human pyramid with your team right outside the bar entrance.", points: 3, level: 3 },
+          { id: 'c24', text: "Superman", description: "Go to the bathroom, put your underwear OVER your pants, and order a drink at the bar like that.", points: 3, level: 3 },
+          { id: 'c25', text: "Choir", description: "Get a table of strangers to sing 'Happy Birthday' to you (or your phone) on video.", points: 3, level: 3 },
+          { id: 'c26', text: "The Bouncer", description: "Convince the Security Guard to take a 'Duck Face' selfie with you.", points: 3, level: 3 },
+          { id: 'c27', text: "The Sommelier", description: "Go to a stranger, ask to taste their drink with a straw, and give a serious critique like a wine expert.", points: 3, level: 3 },
+          { id: 'c28', text: "Creepy Lemon", description: "Make eye contact with a stranger and slowly, uncomfortably lick a lemon slice without breaking eye contact.", points: 3, level: 3 },
+          { id: 'c29', text: "The Mute", description: "Order a complex drink at the bar using ONLY sign language/gestures. No speaking allowed.", points: 3, level: 3 },
+          { id: 'c30', text: "Broken Heart", description: "Tell a stranger a fake breakup story and try to squeeze out real tears.", points: 3, level: 3 },
+          { id: 'c31', text: "Egg Signature", description: "Get a stranger to sign their name on 'The Egg' (or your arm/shirt).", points: 3, level: 3 },
+          { id: 'c32', text: "The Golden Kiss", description: "JACKPOT: Convince a stranger to kiss you on the lips.", points: 5, level: 3 },
+        ];
+
+        const BAR_ASSIGNMENTS = [
+          ALL_CHALLENGES[0], ALL_CHALLENGES[8], ALL_CHALLENGES[20], 
+          ALL_CHALLENGES[1], ALL_CHALLENGES[9], ALL_CHALLENGES[21],
+          ALL_CHALLENGES[2], ALL_CHALLENGES[10], ALL_CHALLENGES[22],
+          ALL_CHALLENGES[3], ALL_CHALLENGES[11], ALL_CHALLENGES[23],
+          ALL_CHALLENGES[4], ALL_CHALLENGES[12], ALL_CHALLENGES[24],
+          ALL_CHALLENGES[5], ALL_CHALLENGES[13], ALL_CHALLENGES[25],
+          ALL_CHALLENGES[6], ALL_CHALLENGES[14]
+        ];
+
+        const EXTRA_CHALLENGES = ALL_CHALLENGES.slice(20);
+
+        // --- TRIVIA QUESTIONS ---
+        const HARD_QUESTIONS = [
+          { q: "Sum the age of the birthday boy plus the number of letters in his name (Eduardo).", a: ["37", "thirty-seven", "37 letters", "thirty seven"] },
+          { q: "If Edu were to double his age in 15 years, what age would he be?", a: ["90", "ninety", "90 years old"] },
+          { q: "How many squares does a Rubik's cube have?", a: ["54", "fifty-four", "54 squares"] },
+          { q: "How many elements are currently in the periodic table?", a: ["118", "one hundred eighteen"] },
+          { q: "How many meters tall is the tallest building in Budapest?", a: ["143", "143m", "143 meters", "mol campus"] },
+          { q: "If Budapest was unified in 1873, how old is the city in 2026?", a: ["153", "one hundred fifty-three", "153 years"] },
+          { q: "If the parliament was inaugurated in 1904, how many years older is it than Edu?", a: ["92", "ninety-two", "92 years"] },
+          { q: "If Edu was born on 20 Feb 1996 and 30 years have passed, what was the day Edu was born?", a: ["tuesday", "tue", "tuesday night"] }
+        ];
+
+        const MEDIUM_QUESTIONS = [
+          { q: "How many letters are in the mexican state where Baby Edu was born?", a: ["9", "nine", "9 letters"] },
+          { q: "How many degrees is the sum of the internal angles of a rectangle?", a: ["360", "360 degrees", "360°", "three hundred sixty"] },
+          { q: "If Baby Edu was born in 1996, how old was he in 2020?", a: ["24", "twenty-four", "24 years", "twenty four"] },
+          { q: "How many months of the year have 28 days?", a: ["12", "twelve", "all 12", "all of them"] },
+          { q: "How many letters are in Baby Edu's full name (without spaces)?", a: ["25", "twenty-five", "25 letters"] },
+          { q: "How old was Baby Edu when he left his country for the first time?", a: ["28", "twenty-eight", "age 28"] },
+          { q: "How many lions are there on the Chain Bridge?", a: ["4", "four", "4 lions"] }
+        ];
+
+        const EASY_QUESTIONS = [
+          { q: "What is Edu's current age?", a: ["30", "thirty", "30 years old", "age 30"] },
+          { q: "I have needles but I don't prick, I have numbers but I don't speak. How many hours do I mark in a full cycle?", a: ["12", "twelve", "12 hours"] },
+          { q: "What is the name of the most famous bridge that connects Buda and Pest?", a: ["chain bridge", "széchenyi chain bridge", "puente de las cadenas"] },
+          { q: "Which number is the district famous for its ruin pubs like Szimpla Kert?", a: ["7", "district vii", "district 7", "7th district", "erzsébetváros", "jewish district"] },
+          { q: "How many colors does the Hungarian flag have in common with the Mexican flag?", a: ["3", "three", "3 colors", "red white green"] },
+          { q: "What past decision do you think changed the birthday boy's life the most?", a: ["budapest", "moving to budapest", "budapest city", "live in budapest", "move to budapest"] }
+        ];
+
+        const RAW_BARS = [
+          { id: 3, name: "Szimpla Kert", lat: 50, lng: 50, link: "https://maps.app.goo.gl/GMLpoUnNSq3Bqmky5", challenge: BAR_ASSIGNMENTS[2] },
+          { id: 12, name: "Ruin Brew", lat: 48, lng: 48, link: "https://maps.app.goo.gl/BUXZwwbuHwyeUE9CA", challenge: BAR_ASSIGNMENTS[11] },
+          { id: 5, name: "Fekete Kutya", lat: 52, lng: 42, link: "https://maps.app.goo.gl/4h475TmbQyMwSBCy7", challenge: BAR_ASSIGNMENTS[4] },
+          { id: 18, name: "Kisüem", lat: 53, lng: 53, link: "https://maps.app.goo.gl/KCghMmcj8VViQBjA6", challenge: BAR_ASSIGNMENTS[17] },
+          { id: 20, name: "Bobek Kert", lat: 51, lng: 45, link: "https://maps.app.goo.gl/xCKJ2jzSdegwDV4NA", challenge: BAR_ASSIGNMENTS[19] },
+          { id: 4, name: "Piana Vyshniа", lat: 49, lng: 35, link: "https://maps.app.goo.gl/qmQerfiwqqNQcuVcA", challenge: BAR_ASSIGNMENTS[3] },
+          { id: 15, name: "Anytime Bar", lat: 45, lng: 38, link: "https://maps.app.goo.gl/TPVhtPGceUTKrMDo8", challenge: BAR_ASSIGNMENTS[14] },
+          { id: 16, name: "DZZS Bar", lat: 55, lng: 36, link: "https://maps.app.goo.gl/SuMXN9fpduhaRhC4A", challenge: BAR_ASSIGNMENTS[15] },
+          { id: 8, name: "Központ", lat: 65, lng: 30, link: "https://maps.app.goo.gl/n7opnM2b5m5qwSzp8", challenge: BAR_ASSIGNMENTS[7] },
+          { id: 17, name: "Telep", lat: 66, lng: 28, link: "https://maps.app.goo.gl/Bq9gooYQVddp35rD7", challenge: BAR_ASSIGNMENTS[16] },
+          { id: 9, name: "Lámpás Pub", lat: 55, lng: 58, link: "https://maps.app.goo.gl/MoXGKzYMcnVZFiBZ8", challenge: BAR_ASSIGNMENTS[8] },
+          { id: 10, name: "HOPS BEER BAR", lat: 47, lng: 60, link: "https://maps.app.goo.gl/QgmN5AGqorgPPEpF7", challenge: BAR_ASSIGNMENTS[9] },
+          { id: 6, name: "Stifler Bar", lat: 25, lng: 65, link: "https://maps.app.goo.gl/tnBSUnzy4GDewide9", challenge: BAR_ASSIGNMENTS[5] },
+          { id: 11, name: "4es6os Wesselényi", lat: 28, lng: 60, link: "https://maps.app.goo.gl/RhEaHeXvbhPPLVvMA", challenge: BAR_ASSIGNMENTS[10] },
+          { id: 14, name: "Humbák Borkápolna", lat: 22, lng: 68, link: "https://maps.app.goo.gl/QoK5H3nzrJnFFpoV7", challenge: BAR_ASSIGNMENTS[13] },
+          { id: 19, name: "Hoff House", lat: 30, lng: 50, link: "https://maps.app.goo.gl/hgFDQMf8gQSJd72J8", challenge: BAR_ASSIGNMENTS[18] },
+          { id: 1, name: "Rizmajer", lat: 60, lng: 75, link: "https://maps.app.goo.gl/KiFALAH89TUXKVbp8", challenge: BAR_ASSIGNMENTS[0] },
+          { id: 2, name: "Hintaló Bár", lat: 65, lng: 72, link: "https://maps.app.goo.gl/hGQHU2NZm1PhK26f9", challenge: BAR_ASSIGNMENTS[1] },
+          { id: 7, name: "Matt Bar", lat: 40, lng: 70, link: "https://maps.app.goo.gl/CcT6xVp581fVn4keA", challenge: BAR_ASSIGNMENTS[6] },
+          { id: 13, name: "57-es számú", lat: 35, lng: 73, link: "https://maps.app.goo.gl/dSr9prqo99MkxRxC8", challenge: BAR_ASSIGNMENTS[12] },
+        ];
+
+        let hardIndex = 0;
+        let medIndex = 0;
+        let easyIndex = 0;
+
+        const INITIAL_BARS = RAW_BARS.map((bar) => {
+          let triviaQuestion;
+          const level = bar.challenge.level;
+
+          if (level === 1) {
+            triviaQuestion = HARD_QUESTIONS[hardIndex];
+            hardIndex = (hardIndex + 1) % HARD_QUESTIONS.length;
+          } else if (level === 2) {
+            triviaQuestion = MEDIUM_QUESTIONS[medIndex];
+            medIndex = (medIndex + 1) % MEDIUM_QUESTIONS.length;
+          } else {
+            triviaQuestion = EASY_QUESTIONS[easyIndex];
+            easyIndex = (easyIndex + 1) % EASY_QUESTIONS.length;
+          }
+
+          return { ...bar, trivia: triviaQuestion };
+        });
+
+        const App = () => {
+          const [activeBar, setActiveBar] = useState(null);
+          const [activeQuestionBar, setActiveQuestionBar] = useState(null);
+          const [showSidebar, setShowSidebar] = useState(false);
+          const [showExtras, setShowExtras] = useState(false);
+          
+          const [userState, setUserState] = useState({
+            completed: [],
+            extraCompleted: [],
+            unlockedBars: []
+          });
+          
+          const [showConfetti, setShowConfetti] = useState(false);
+          const [answerInput, setAnswerInput] = useState("");
+          const [answerError, setAnswerError] = useState(false);
+
+          const [mapTransform, setMapTransform] = useState({ x: 0, y: 0, scale: 1 });
+          const isDragging = useRef(false);
+          const lastPosition = useRef({ x: 0, y: 0 });
+          const pinchStartDist = useRef(null);
+          const pinchStartScale = useRef(null);
+          const containerRef = useRef(null);
+
+          const calculateScore = () => {
+            let score = 0;
+            userState.completed.forEach(barId => {
+              const bar = INITIAL_BARS.find(b => b.id === barId);
+              if (bar) score += bar.challenge.points * 100;
+            });
+            userState.extraCompleted.forEach(chId => {
+              const challenge = EXTRA_CHALLENGES.find(c => c.id === chId);
+              if (challenge) score += challenge.points * 100;
+            });
+            return score;
+          };
+          const currentScore = calculateScore();
+
+          const getConstrainedTransform = (newX, newY, newScale) => {
+            const MAP_SIZE = 1000;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+
+            const minScaleW = vw / MAP_SIZE;
+            const minScaleH = vh / MAP_SIZE;
+            
+            const absMinScale = Math.max(minScaleW, minScaleH) * 1.1; 
+            const constrainedScale = Math.max(absMinScale, Math.min(newScale, 8));
+
+            const finalScaledW = MAP_SIZE * constrainedScale;
+            const finalScaledH = MAP_SIZE * constrainedScale;
+
+            const maxDX = (finalScaledW - vw) / 2;
+            const maxDY = (finalScaledH - vh) / 2;
+
+            const constrainedX = Math.max(-maxDX, Math.min(newX, maxDX));
+            const constrainedY = Math.max(-maxDY, Math.min(newY, maxDY));
+
+            return { x: constrainedX, y: constrainedY, scale: constrainedScale };
+          };
+
+          const handlePinClick = (bar) => {
+            if (isUnlocked(bar.id)) {
+              setActiveBar(bar);
+              setActiveQuestionBar(null);
+            } else {
+              setActiveQuestionBar(bar);
+              setActiveBar(null);
+              setAnswerInput("");
+              setAnswerError(false);
+            }
+          };
+
+          const centerOnBar = (bar) => {
+            const targetScale = 2.5;
+            const mapDX = ((bar.lng - 50) / 100) * 1000;
+            const mapDY = ((bar.lat - 50) / 100) * 1000;
+            const targetX = -mapDX * targetScale;
+            const targetY = -mapDY * targetScale;
+            const constrained = getConstrainedTransform(targetX, targetY, targetScale);
+            setMapTransform(constrained);
+            handlePinClick(bar);
+            if (window.innerWidth < 768) setShowSidebar(false); 
+          };
+
+          const submitAnswer = (e) => {
+            e.preventDefault();
+            if (!activeQuestionBar) return;
+            
+            const userAnswer = answerInput.toLowerCase().trim();
+            const validAnswers = activeQuestionBar.trivia.a;
+            const isCorrect = validAnswers.some(ans => ans.toLowerCase() === userAnswer);
+
+            if (isCorrect) {
+              setUserState(prev => ({
+                ...prev,
+                unlockedBars: [...prev.unlockedBars, activeQuestionBar.id]
+              }));
+              setActiveBar(activeQuestionBar);
+              setActiveQuestionBar(null);
+              triggerConfetti();
+            } else {
+              setAnswerError(true);
+            }
+          };
+
+          const toggleChallenge = (barId) => {
+            const isCompleted = userState.completed.includes(barId);
+            if (!isCompleted) triggerConfetti();
+            setUserState(prev => ({
+              ...prev,
+              completed: isCompleted 
+                ? prev.completed.filter(id => id !== barId)
+                : [...prev.completed, barId]
+            }));
+          };
+
+          const toggleExtraChallenge = (challengeId) => {
+            const isCompleted = userState.extraCompleted.includes(challengeId);
+            if (!isCompleted) triggerConfetti();
+            setUserState(prev => ({
+              ...prev,
+              extraCompleted: isCompleted
+                ? prev.extraCompleted.filter(id => id !== challengeId)
+                : [...prev.extraCompleted, challengeId]
+            }));
+          };
+
+          const triggerConfetti = () => {
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 2000);
+          };
+
+          const isCompleted = (id) => userState.completed.includes(id);
+          const isUnlocked = (id) => userState.unlockedBars.includes(id);
+
+          const getTouchDist = (touches) => {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.hypot(dx, dy);
+          };
+
+          const handleWheel = (e) => {
+            e.preventDefault();
+            const scaleAdjustment = -e.deltaY * 0.001;
+            const targetScale = mapTransform.scale + scaleAdjustment;
+            const constrained = getConstrainedTransform(mapTransform.x, mapTransform.y, targetScale);
+            setMapTransform(constrained);
+          };
+
+          const handleMouseDown = (e) => {
+            isDragging.current = true;
+            lastPosition.current = { x: e.clientX, y: e.clientY };
+          };
+
+          const handleMouseMove = (e) => {
+            if (!isDragging.current) return;
+            const dx = e.clientX - lastPosition.current.x;
+            const dy = e.clientY - lastPosition.current.y;
+            lastPosition.current = { x: e.clientX, y: e.clientY };
+            const targetX = mapTransform.x + dx;
+            const targetY = mapTransform.y + dy;
+            const constrained = getConstrainedTransform(targetX, targetY, mapTransform.scale);
+            setMapTransform(constrained);
+          };
+
+          const handleMouseUp = () => {
+            isDragging.current = false;
+          };
+
+          const handleTouchStart = (e) => {
+            if (e.touches.length === 2) {
+              isDragging.current = false;
+              pinchStartDist.current = getTouchDist(e.touches);
+              pinchStartScale.current = mapTransform.scale;
+            } else if (e.touches.length === 1) {
+              isDragging.current = true;
+              const touch = e.touches[0];
+              lastPosition.current = { x: touch.clientX, y: touch.clientY };
+            }
+          };
+
+          const handleTouchMove = (e) => {
+            if (e.touches.length === 2 && pinchStartDist.current) {
+              const currentDist = getTouchDist(e.touches);
+              const ratio = currentDist / pinchStartDist.current;
+              const targetScale = pinchStartScale.current * ratio;
+              const constrained = getConstrainedTransform(mapTransform.x, mapTransform.y, targetScale);
+              setMapTransform(constrained);
+            } else if (e.touches.length === 1 && isDragging.current) {
+              const touch = e.touches[0];
+              const dx = touch.clientX - lastPosition.current.x;
+              const dy = touch.clientY - lastPosition.current.y;
+              lastPosition.current = { x: touch.clientX, y: touch.clientY };
+              const targetX = mapTransform.x + dx;
+              const targetY = mapTransform.y + dy;
+              const constrained = getConstrainedTransform(targetX, targetY, mapTransform.scale);
+              setMapTransform(constrained);
+            }
+          };
+
+          const handleTouchEnd = () => {
+            isDragging.current = false;
+            pinchStartDist.current = null;
+          };
+
+          const zoomIn = () => {
+            const constrained = getConstrainedTransform(mapTransform.x, mapTransform.y, mapTransform.scale * 1.3);
+            setMapTransform(constrained);
+          };
+          
+          const zoomOut = () => {
+            const constrained = getConstrainedTransform(mapTransform.x, mapTransform.y, mapTransform.scale / 1.3);
+            setMapTransform(constrained);
+          };
+          
+          const resetMap = () => {
+            const constrained = getConstrainedTransform(0, 0, 0); 
+            setMapTransform(constrained);
+          };
+
+          const getLevelBadge = (level) => {
+            if (level === 1) return <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-500 text-slate-950 uppercase shadow-[0_0_10px_rgba(16,185,129,0.4)]">Easy</span>;
+            if (level === 2) return <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-500 text-slate-950 uppercase shadow-[0_0_10px_rgba(245,158,11,0.4)]">Med</span>;
+            if (level === 3) return <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-600 text-white uppercase shadow-[0_0_10px_rgba(225,29,72,0.4)]">Hard</span>;
+          };
+
+          const getLevelColor = (level) => {
+            if (level === 1) return "text-emerald-400 border-emerald-400/50 bg-emerald-400/10";
+            if (level === 2) return "text-amber-400 border-amber-400/50 bg-amber-400/10";
+            if (level === 3) return "text-rose-500 border-rose-500/50 bg-rose-500/10";
+            return "text-slate-400";
+          };
+          
+          useEffect(() => {
+            resetMap();
+            window.addEventListener('resize', resetMap);
+            return () => window.removeEventListener('resize', resetMap);
+          }, []);
+
+          return (
+            <div className="flex h-[100dvh] bg-slate-950 text-slate-100 font-sans overflow-hidden select-none">
+              
+              <div className={`
+                fixed inset-y-0 left-0 z-50 bg-slate-900 border-r border-slate-800 transition-transform duration-300 shadow-2xl flex flex-col w-full md:w-80
+                ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
+              `}>
+                <div className="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center flex-none">
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <i className="fa-solid fa-list text-cyan-400" style={{fontSize: '20px'}}></i> Bar List
+                  </h2>
+                  <button onClick={() => setShowSidebar(false)} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 text-slate-300">
+                    <i className="fa-solid fa-xmark" style={{fontSize: '20px'}}></i>
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto bg-slate-900 p-2 space-y-2">
+                  {INITIAL_BARS.map(bar => {
+                    const unlocked = isUnlocked(bar.id);
+                    return (
+                      <button 
+                        key={bar.id}
+                        onClick={() => centerOnBar(bar)}
+                        className={`w-full text-left p-3 rounded-lg border transition-all flex items-center justify-between group
+                          ${isCompleted(bar.id) 
+                            ? 'border-emerald-500/30 bg-emerald-900/20 hover:bg-emerald-900/30' 
+                            : unlocked 
+                              ? 'border-slate-800 bg-slate-800 hover:bg-slate-700'
+                              : 'border-slate-800/50 bg-slate-900 hover:bg-slate-800 opacity-70'
+                          }
+                          ${activeBar?.id === bar.id ? 'ring-1 ring-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.15)]' : ''}
+                        `}
+                      >
+                        <div>
+                          <div className="font-bold text-sm text-slate-200 flex items-center gap-2">
+                            {unlocked ? bar.name : <span className="flex items-center gap-1.5"><i className="fa-solid fa-lock" style={{fontSize: '12px'}}></i> Locked Location</span>}
+                          </div>
+                          {unlocked && (
+                            <div className="text-xs text-slate-400 flex gap-2 mt-1 items-center">
+                              {getLevelBadge(bar.challenge.level)}
+                              <span>{bar.challenge.points * 100} pts</span>
+                            </div>
+                          )}
+                        </div>
+                        {isCompleted(bar.id) && <i className="fa-solid fa-circle-check text-emerald-500" style={{fontSize: '18px'}}></i>}
+                      </button>
+                    )
+                  })}
+                  <div className="h-20"></div>
+                </div>
+              </div>
+
+              <div className="flex-1 flex flex-col relative h-full bg-slate-950">
+                <header className="flex-none z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 p-3 flex justify-between items-center shadow-lg">
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => setShowSidebar(true)}
+                      className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors shadow-sm flex items-center gap-2 text-slate-300"
+                    >
+                      <i className="fa-solid fa-bars text-cyan-400" style={{fontSize: '20px'}}></i>
+                      <span className="text-sm font-bold md:hidden">Menu</span>
+                    </button>
+                    <div>
+                      <h1 className="text-lg font-black bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent leading-none tracking-tighter">
+                        BUDAPEST QUEST
+                      </h1>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700">
+                    <i className="fa-solid fa-trophy text-yellow-400" style={{fontSize: '16px'}}></i>
+                    <div className="flex flex-col items-end leading-none">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">Score</span>
+                      <span className="text-lg font-black text-white">{currentScore}</span>
+                    </div>
+                  </div>
+                </header>
+
+                <div 
+                  ref={containerRef}
+                  className="flex-1 relative bg-slate-950 overflow-hidden cursor-move touch-none"
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                  onWheel={handleWheel}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                >
+                  <div 
+                    style={{ 
+                      transform: `translate(${mapTransform.x}px, ${mapTransform.y}px) scale(${mapTransform.scale})`,
+                      transformOrigin: 'center',
+                      transition: isDragging.current ? 'none' : 'transform 0.15s cubic-bezier(0.1, 0.6, 0.1, 1)',
+                      width: '100%',
+                      height: '100%'
+                    }}
+                    className="absolute top-0 left-0 flex items-center justify-center"
+                  >
+                    <div className="relative w-[1000px] h-[1000px] bg-slate-950 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+                      <svg viewBox="0 0 1000 1000" className="absolute inset-0 w-full h-full">
+                        <defs>
+                          <pattern id="smallGrid" width="50" height="50" patternUnits="userSpaceOnUse">
+                            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#1e293b" strokeWidth="1" opacity="0.8"/>
+                          </pattern>
+                          <pattern id="grid" width="200" height="200" patternUnits="userSpaceOnUse">
+                            <rect width="200" height="200" fill="url(#smallGrid)"/>
+                            <path d="M 200 0 L 0 0 0 200" fill="none" stroke="#334155" strokeWidth="2" opacity="0.8"/>
+                          </pattern>
+                        </defs>
+                        <rect width="1000" height="1000" fill="url(#grid)" />
+                        <line x1="500" y1="0" x2="500" y2="1000" stroke="#0ea5e9" strokeWidth="2" opacity="0.3" strokeDasharray="20,10"/>
+                        <line x1="0" y1="500" x2="1000" y2="500" stroke="#0ea5e9" strokeWidth="2" opacity="0.3" strokeDasharray="20,10"/>
+                        <text x="500" y="50" textAnchor="middle" fill="#0ea5e9" fontSize="60" fontWeight="black" opacity="0.9">N</text>
+                        <text x="500" y="980" textAnchor="middle" fill="#475569" fontSize="60" fontWeight="black" opacity="0.5">S</text>
+                        <text x="960" y="520" textAnchor="end" fill="#475569" fontSize="60" fontWeight="black" opacity="0.5">E</text>
+                        <text x="40" y="520" textAnchor="start" fill="#475569" fontSize="60" fontWeight="black" opacity="0.5">W</text>
+                        <circle cx="500" cy="500" r="150" fill="none" stroke="#334155" strokeWidth="2" strokeDasharray="10,10" opacity="0.5"/>
+                        <circle cx="500" cy="500" r="300" fill="none" stroke="#334155" strokeWidth="2" strokeDasharray="10,10" opacity="0.5"/>
+                        <circle cx="500" cy="500" r="450" fill="none" stroke="#334155" strokeWidth="2" strokeDasharray="10,10" opacity="0.5"/>
+                      </svg>
+                      
+                      {INITIAL_BARS.map((bar) => {
+                        const unlocked = isUnlocked(bar.id);
+                        const completed = isCompleted(bar.id);
+                        const active = activeBar?.id === bar.id || activeQuestionBar?.id === bar.id;
+                        
+                        let pinColorClass = "text-emerald-400";
+                        if (bar.challenge.level === 2) pinColorClass = "text-amber-400";
+                        if (bar.challenge.level === 3) pinColorClass = "text-rose-500";
+                        if (completed) pinColorClass = "text-white";
+                        if (!unlocked) pinColorClass = "text-slate-500";
+
+                        const baseSize = 1; 
+                        const inverseScale = baseSize / mapTransform.scale; 
+
+                        return (
+                          <button
+                            key={bar.id}
+                            onClick={(e) => { e.stopPropagation(); handlePinClick(bar); }}
+                            className={`absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300 group z-50`}
+                            style={{ 
+                              top: `${bar.lat}%`, 
+                              left: `${bar.lng}%`,
+                              transform: `translate(-50%, -50%) scale(${active ? inverseScale * 1.5 : inverseScale})` 
+                            }}
+                          >
+                            <div className="p-6 -m-6 flex flex-col items-center">
+                              <div className="relative flex flex-col items-center">
+                                <span className={`
+                                  whitespace-nowrap px-2 py-1 bg-slate-800 text-slate-100 text-xs font-bold rounded shadow-lg border border-slate-600 mb-2
+                                  ${active || (unlocked && mapTransform.scale > 2) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity pointer-events-none
+                                `}>
+                                  {unlocked ? bar.name : "???"}
+                                </span>
+
+                                {unlocked && (
+                                  <div className={`
+                                    absolute inset-0 rounded-full blur-xl opacity-60
+                                    ${completed ? 'bg-emerald-500' : 'bg-cyan-500'}
+                                  `}></div>
+                                )}
+
+                                <div className={`
+                                  relative w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-[0_0_20px_rgba(0,0,0,0.5)]
+                                  ${active ? 'bg-slate-900 border-cyan-400 scale-110' : 'bg-slate-900 border-slate-500'}
+                                  ${completed ? 'bg-emerald-600 border-emerald-400' : ''}
+                                  ${!unlocked ? 'bg-slate-800 border-slate-600' : ''}
+                                `}>
+                                  {unlocked ? (
+                                    completed ? <i className="fa-solid fa-circle-check text-white" style={{fontSize: '24px'}}></i> : <i className={`fa-solid fa-location-dot ${pinColorClass}`} style={{fontSize: '24px'}}></i>
+                                  ) : (
+                                    <i className="fa-solid fa-lock text-slate-500" style={{fontSize: '20px'}}></i>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="absolute right-4 bottom-24 flex flex-col gap-3 z-30">
+                    <button onClick={zoomIn} className="p-3 bg-slate-800/90 text-slate-200 rounded-full shadow-lg border border-slate-600 active:bg-slate-700 backdrop-blur-sm"><i className="fa-solid fa-plus" style={{fontSize: '24px'}}></i></button>
+                    <button onClick={zoomOut} className="p-3 bg-slate-800/90 text-slate-200 rounded-full shadow-lg border border-slate-600 active:bg-slate-700 backdrop-blur-sm"><i className="fa-solid fa-minus" style={{fontSize: '24px'}}></i></button>
+                    <button onClick={resetMap} className="p-3 bg-slate-800/90 text-slate-200 rounded-full shadow-lg border border-slate-600 active:bg-slate-700 backdrop-blur-sm"><i className="fa-regular fa-compass" style={{fontSize: '24px'}}></i></button>
+                  </div>
+                  
+                  <button 
+                    onClick={() => setShowExtras(true)}
+                    className="absolute bottom-6 right-4 left-4 z-40 bg-gradient-to-r from-cyan-600 to-blue-600 text-white px-5 py-3.5 rounded-2xl font-bold shadow-[0_0_20px_rgba(8,145,178,0.4)] border border-white/10 flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  >
+                    <i className="fa-solid fa-list" style={{fontSize: '20px'}}></i>
+                    Extra Missions
+                  </button>
+                </div>
+              </div>
+
+              {activeQuestionBar && (
+                <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm p-4 flex items-center justify-center">
+                  <div className="bg-slate-900 w-full max-w-sm rounded-2xl flex flex-col shadow-2xl overflow-hidden border border-slate-700 relative animate-in zoom-in-95 duration-200">
+                    <button onClick={() => setActiveQuestionBar(null)} className="absolute top-3 right-3 p-2 text-slate-500 hover:text-white"><i className="fa-solid fa-xmark" style={{fontSize: '20px'}}></i></button>
+
+                    <div className="p-6">
+                      <div className="flex justify-center mb-4">
+                        <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center border-2 border-slate-600">
+                          <i className="fa-solid fa-circle-question text-cyan-400" style={{fontSize: '32px'}}></i>
+                        </div>
+                      </div>
+
+                      <h3 className="text-center text-xl font-bold text-white mb-2">Discovery Challenge</h3>
+                      <p className="text-center text-slate-400 text-sm mb-6">Answer correctly to reveal this location!</p>
+
+                      <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-4">
+                         <p className="text-center font-medium text-slate-200">{activeQuestionBar.trivia.q}</p>
+                      </div>
+
+                      <form onSubmit={submitAnswer} className="space-y-4">
+                        <div>
+                          <input 
+                            type="text" 
+                            value={answerInput}
+                            onChange={(e) => { setAnswerInput(e.target.value); setAnswerError(false); }}
+                            placeholder="Type your answer..."
+                            className={`w-full bg-slate-950 border text-center text-lg font-bold p-3 rounded-xl outline-none focus:ring-2 transition-all
+                              ${answerError ? 'border-red-500 text-red-500 focus:ring-red-500/50' : 'border-slate-700 text-white focus:ring-cyan-500/50 focus:border-cyan-500'}
+                            `}
+                            autoFocus
+                          />
+                          {answerError && <p className="text-red-500 text-xs text-center mt-2 font-bold">Incorrect! Try again.</p>}
+                        </div>
+                        
+                        <button 
+                          type="submit"
+                          className="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition-all"
+                        >
+                          <span className="flex items-center justify-center gap-2"><i className="fa-solid fa-lock-open" style={{fontSize: '18px'}}></i> UNLOCK LOCATION</span>
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {showExtras && (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 flex items-center justify-center">
+                  <div className="bg-slate-900 w-full max-w-md h-[80vh] rounded-2xl flex flex-col shadow-2xl overflow-hidden border border-slate-700">
+                    <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+                      <h2 className="text-xl font-bold text-white">Extra Missions</h2>
+                      <button onClick={() => setShowExtras(false)} className="p-2 bg-slate-800 border border-slate-700 rounded-full hover:bg-slate-700 text-slate-400"><i className="fa-solid fa-xmark" style={{fontSize: '20px'}}></i></button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-900">
+                      {EXTRA_CHALLENGES.map((ch) => {
+                        const isDone = userState.extraCompleted.includes(ch.id);
+                        return (
+                          <div 
+                            key={ch.id} 
+                            onClick={() => toggleExtraChallenge(ch.id)}
+                            className={`p-4 rounded-xl border transition-all cursor-pointer relative overflow-hidden shadow-sm
+                              ${isDone ? 'bg-emerald-900/20 border-emerald-500/50' : 'bg-slate-800 border-slate-700 hover:border-cyan-500/50'}
+                            `}
+                          >
+                            <div className="flex items-start gap-3 relative z-10">
+                              <div className={`mt-0.5 w-6 h-6 rounded border flex items-center justify-center shrink-0 ${isDone ? 'bg-emerald-500 border-emerald-500' : 'border-slate-600 bg-slate-800'}`}>
+                                  {isDone && <i className="fa-solid fa-circle-check text-white" style={{fontSize: '14px'}}></i>}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  {getLevelBadge(ch.level)}
+                                  <span className={`text-xs font-bold ${isDone ? 'text-emerald-400' : 'text-slate-400'}`}>{ch.points * 100} pts</span>
+                                </div>
+                                <h4 className={`font-bold text-sm ${isDone ? 'text-slate-500 line-through' : 'text-slate-200'}`}>{ch.text}</h4>
+                                <p className={`text-xs mt-1 leading-snug ${isDone ? 'text-slate-600' : 'text-slate-400'}`}>{ch.description}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeBar && (
+                <div className="fixed inset-x-0 bottom-0 z-50 h-auto">
+                  <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px]" onClick={() => setActiveBar(null)}></div>
+                  
+                  <div className="bg-slate-900 border-t border-slate-700 rounded-t-3xl p-6 pb-8 shadow-[0_-10px_60px_rgba(0,0,0,0.8)] relative animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto">
+                    <button onClick={() => setActiveBar(null)} className="absolute top-4 right-4 p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white"><i className="fa-solid fa-xmark" style={{fontSize: '20px'}}></i></button>
+
+                    <div className="space-y-4 max-w-lg mx-auto pt-2">
+                      <div>
+                        <h2 className="text-3xl font-black text-white leading-none">{activeBar.name}</h2>
+                        <div className="flex items-center gap-2 mt-2">
+                            <span className="px-2 py-0.5 rounded bg-slate-800 text-xs font-bold text-slate-400 border border-slate-700 uppercase tracking-widest">District VII</span>
+                            {getLevelBadge(activeBar.challenge.level)}
+                        </div>
+                      </div>
+
+                      <div 
+                        onClick={() => toggleChallenge(activeBar.id)}
+                        className={`cursor-pointer p-5 rounded-2xl border-2 transition-all active:scale-98 shadow-md relative overflow-hidden group
+                          ${isCompleted(activeBar.id) 
+                            ? 'bg-emerald-900/30 border-emerald-500/50' 
+                            : getLevelColor(activeBar.challenge.level).replace('text-', 'border-').replace('bg-', 'hover:bg-')
+                          }`}
+                      >
+                        <div className="flex items-start gap-4 relative z-10">
+                          <div className={`mt-1 w-12 h-12 rounded-full border-2 flex items-center justify-center flex-shrink-0 shadow-sm transition-colors
+                              ${isCompleted(activeBar.id) ? 'bg-emerald-500 border-emerald-500' : 'border-slate-500 bg-slate-800'}
+                            `}
+                          >
+                            {isCompleted(activeBar.id) ? <i className="fa-solid fa-circle-check text-white" style={{fontSize: '24px'}}></i> : <i className="fa-solid fa-bolt text-slate-400" style={{fontSize: '24px'}}></i>}
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-black tracking-tight flex items-center gap-2 text-white">
+                              CHALLENGE
+                              <span className="text-xs font-bold bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-slate-400">{activeBar.challenge.points * 100} PTS</span>
+                            </h3>
+                            <p className="font-bold text-base mt-1 leading-snug text-slate-300">{activeBar.challenge.text}</p>
+                            <p className="mt-1 text-sm leading-relaxed text-slate-500">{activeBar.challenge.description}</p>
+                            
+                            <div className={`mt-3 text-[10px] font-bold uppercase tracking-wider py-1.5 px-3 rounded-lg inline-block transition-colors
+                              ${isCompleted(activeBar.id) ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-500 group-hover:bg-slate-700'}
+                            `}>
+                              {isCompleted(activeBar.id) ? '✓ MISSION COMPLETE' : 'TAP TO COMPLETE'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <a 
+                        href={activeBar.link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full py-4 bg-cyan-600 text-white hover:bg-cyan-500 rounded-xl font-black uppercase tracking-wide transition-all shadow-[0_0_20px_rgba(8,145,178,0.3)] active:scale-95 text-sm"
+                      >
+                        <i className="fa-solid fa-location-dot text-white" style={{fontSize: '18px'}}></i> 
+                        <span>Open in Google Maps</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {showConfetti && (
+                <div className="fixed inset-0 pointer-events-none z-[100] flex justify-center items-center">
+                   <div className="text-8xl animate-bounce drop-shadow-[0_0_25px_rgba(255,255,255,0.5)]">🍻</div>
+                </div>
+              )}
+
+            </div>
+          );
+        };
+
+        // Esperar a que todo el HTML esté listo antes de arrancar React
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const rootElement = document.getElementById('root');
+            if(window.React && window.ReactDOM) {
+                const root = ReactDOM.createRoot(rootElement);
+                root.render(<App />);
+            } else {
+                rootElement.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>Error grave: No hay internet o las librerías están bloqueadas.</h2>";
+            }
+        });
+    </script>
+</body>
+</html>
