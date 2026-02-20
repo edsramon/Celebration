@@ -30,10 +30,10 @@
         window.onerror = function(message, source, lineno, colno, error) {
             const root = document.getElementById('root');
             if(root) {
-                root.innerHTML = '<div style="background:#450a0a; color:#fca5a5; padding:20px; font-family:sans-serif; height:100vh; overflow:auto;">' +
-                    '<h2 style="color:white;">¡Ups! Algo falló en tu navegador.</h2>' +
-                    '<p>Por favor, tómale foto a este error y mándaselo al programador:</p>' +
-                    '<div style="background:#000; padding:10px; border-radius:5px; margin-top:10px; font-family:monospace;">' + message + '<br>Línea: ' + lineno + '</div>' +
+                root.innerHTML = '<div style="background:#020617; color:#fca5a5; padding:20px; font-family:sans-serif; height:100vh; overflow:auto;">' +
+                    '<h2 style="color:white; font-weight:bold; font-size: 1.5rem;">¡Ups! Algo falló.</h2>' +
+                    '<p style="margin-top: 10px;">Tómale captura a esto y mándalo al programador:</p>' +
+                    '<div style="background:#000; padding:15px; border-radius:10px; margin-top:15px; font-family:monospace; border: 1px solid #334155;">' + message + '<br><br>Línea: ' + lineno + '</div>' +
                 '</div>';
             }
         };
@@ -770,16 +770,14 @@
           );
         };
 
-        // Esperar a que todo el HTML esté listo antes de arrancar React
-        window.addEventListener('DOMContentLoaded', (event) => {
-            const rootElement = document.getElementById('root');
-            if(window.React && window.ReactDOM) {
-                const root = ReactDOM.createRoot(rootElement);
-                root.render(<App />);
-            } else {
-                rootElement.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>Error grave: No hay internet o las librerías están bloqueadas.</h2>";
-            }
-        });
+        // Renderizado directo, sin esperar eventos porque Babel ya lo hace seguro
+        const rootElement = document.getElementById('root');
+        if(window.React && window.ReactDOM) {
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(<App />);
+        } else {
+            rootElement.innerHTML = "<h2 style='color:red; text-align:center; margin-top:50px;'>Error grave: No hay internet o las librerías están bloqueadas.</h2>";
+        }
     </script>
 </body>
 </html>
