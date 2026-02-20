@@ -140,7 +140,7 @@
 
         const MEDIUM_QUESTIONS = [
           { q: "How many letters are in the mexican state where Baby Edu was born?", a: ["9", "nine", "9 letters"] },
-          { q: "How many degrees is the sum of the internal angles of a rectangle?", a: ["360", "360 degrees", "360°", "three hundred sixty"] },
+          { q: "How many degrees is the sum of the internal angles of a triangle?", a: ["180", "180 degrees", "180°", "one hundred eighty"] },
           { q: "If Baby Edu was born in 1996, how old was he in 2020?", a: ["24", "twenty-four", "24 years", "twenty four"] },
           { q: "How many months of the year have 28 days?", a: ["12", "twelve", "all 12", "all of them"] },
           { q: "How many letters are in Baby Edu's full name (without spaces)?", a: ["25", "twenty-five", "25 letters"] },
@@ -450,9 +450,9 @@
                 <div className="flex items-center gap-3">
                   <button 
                     onClick={() => setShowSidebar(true)}
-                    className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full border border-white/10 transition-colors shadow-sm text-cyan-400 active:scale-90"
+                    className="w-10 h-10 flex items-center justify-center bg-black/40 backdrop-blur-md hover:bg-black/60 rounded-full border border-white/10 transition-all shadow-md text-cyan-400 active:scale-90 hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)]"
                   >
-                    <i className="fa-solid fa-bars" style={{fontSize: '18px'}}></i>
+                    <i className="fa-solid fa-bars" style={{fontSize: '16px'}}></i>
                   </button>
                   <div>
                     <h1 className="text-xl font-black bg-gradient-to-r from-cyan-300 to-indigo-300 bg-clip-text text-transparent leading-none tracking-tighter drop-shadow-sm">
@@ -461,7 +461,7 @@
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10 shadow-inner">
+                <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-full border border-white/10 shadow-inner backdrop-blur-md">
                   <i className="fa-solid fa-trophy text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]" style={{fontSize: '16px'}}></i>
                   <div className="flex flex-col items-end leading-none">
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Score</span>
@@ -651,17 +651,17 @@
 
                 {/* --- CONTROLES FLOTANTES PREMIUM (Ajustados al Safe Area Bottom) --- */}
                 <div className="absolute right-4 bottom-[max(env(safe-area-inset-bottom,24px),24px)] flex flex-col gap-3 z-30">
-                  <button onClick={zoomIn} className="w-12 h-12 flex items-center justify-center glass-panel text-white rounded-full shadow-2xl active:scale-90 transition-transform"><i className="fa-solid fa-plus text-xl"></i></button>
-                  <button onClick={zoomOut} className="w-12 h-12 flex items-center justify-center glass-panel text-white rounded-full shadow-2xl active:scale-90 transition-transform"><i className="fa-solid fa-minus text-xl"></i></button>
-                  <button onClick={resetMap} className="w-12 h-12 flex items-center justify-center glass-panel text-cyan-400 rounded-full shadow-2xl active:scale-90 transition-transform"><i className="fa-solid fa-crosshairs text-xl"></i></button>
+                  <button onClick={zoomIn} className="w-12 h-12 flex items-center justify-center bg-black/50 backdrop-blur-xl border border-white/10 text-white rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] active:scale-90 transition-all hover:border-cyan-500/50 hover:bg-black/70"><i className="fa-solid fa-plus text-lg"></i></button>
+                  <button onClick={zoomOut} className="w-12 h-12 flex items-center justify-center bg-black/50 backdrop-blur-xl border border-white/10 text-white rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] active:scale-90 transition-all hover:border-cyan-500/50 hover:bg-black/70"><i className="fa-solid fa-minus text-lg"></i></button>
+                  <button onClick={resetMap} className="w-12 h-12 flex items-center justify-center bg-black/50 backdrop-blur-xl border border-cyan-500/30 text-cyan-400 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.2)] active:scale-90 transition-all hover:border-cyan-400 hover:shadow-[0_0_25px_rgba(6,182,212,0.4)]"><i className="fa-solid fa-crosshairs text-lg"></i></button>
                 </div>
                 
-                {/* EXTRA MISSIONS BUTTON */}
+                {/* EXTRA MISSIONS BUTTON - DISEÑO DE LUJO Y COMPACTO */}
                 <button 
                   onClick={() => setShowExtras(true)}
-                  className="absolute bottom-[max(env(safe-area-inset-bottom,24px),24px)] left-4 right-20 z-40 bg-gradient-to-r from-cyan-600 to-indigo-600 text-white px-5 py-4 rounded-full font-black text-[15px] tracking-wide shadow-[0_10px_30px_rgba(8,145,178,0.5)] border border-white/20 flex items-center justify-center gap-3 active:scale-95 transition-transform"
+                  className="absolute bottom-[max(env(safe-area-inset-bottom,24px),24px)] left-1/2 -translate-x-1/2 z-40 bg-black/60 backdrop-blur-xl text-white px-6 py-3.5 rounded-full font-black text-[11px] tracking-[0.2em] shadow-[0_10px_30px_rgba(0,0,0,0.8)] border border-cyan-500/40 flex items-center justify-center gap-3 active:scale-95 transition-all hover:bg-black/80 hover:border-cyan-400 hover:shadow-[0_0_25px_rgba(6,182,212,0.3)] whitespace-nowrap"
                 >
-                  <i className="fa-solid fa-bolt text-yellow-300 drop-shadow-md text-lg"></i>
+                  <i className="fa-solid fa-bolt text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] text-sm"></i>
                   EXTRA MISSIONS
                 </button>
               </div>
@@ -703,9 +703,9 @@
                         
                         <button 
                           type="submit"
-                          className="w-full py-4 mt-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black text-lg rounded-2xl shadow-[0_10px_20px_rgba(6,182,212,0.4)] active:scale-95 transition-all flex items-center justify-center gap-2 tracking-wide"
+                          className="w-full py-4 mt-2 bg-slate-950 border border-cyan-500/50 text-cyan-400 font-black text-sm rounded-2xl shadow-[0_0_20px_rgba(6,182,212,0.15)] hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] hover:bg-slate-900 active:scale-95 transition-all flex items-center justify-center gap-3 tracking-[0.2em] uppercase"
                         >
-                          DECRYPT <i className="fa-solid fa-fingerprint"></i>
+                          DECRYPT <i className="fa-solid fa-fingerprint text-lg"></i>
                         </button>
                       </form>
                     </div>
@@ -811,9 +811,9 @@
                         href={activeBar.link} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-3 w-full py-4.5 h-14 bg-white text-slate-950 hover:bg-slate-200 rounded-[1.5rem] font-black uppercase tracking-wide transition-all shadow-[0_10px_20px_rgba(255,255,255,0.1)] active:scale-95 text-[15px]"
+                        className="flex items-center justify-center gap-3 w-full py-4 h-14 bg-slate-950 border border-white/10 text-white hover:border-cyan-500/50 rounded-2xl font-black uppercase tracking-[0.15em] transition-all shadow-xl active:scale-95 text-xs"
                       >
-                        <i className="fa-solid fa-location-arrow text-lg"></i> 
+                        <i className="fa-solid fa-location-arrow text-cyan-400 text-sm"></i> 
                         <span>Open in Maps</span>
                       </a>
                     </div>
