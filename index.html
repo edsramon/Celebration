@@ -240,13 +240,13 @@
 
           // LÓGICA DE PANEO INFINITO RELAJADO (Resuelve el problema rectangular)
           const getConstrainedTransform = (newX, newY, newScale) => {
-            // El mapa de fondo ahora es enorme (2000x2000)
+            // El mapa de fondo ahora es enorme (4000x4000)
             const MIN_SCALE = 0.3; // Permite alejar más
             const MAX_SCALE = 5;
             const constrainedScale = Math.max(MIN_SCALE, Math.min(newScale, MAX_SCALE));
 
-            // Relajamos los bordes: Permitimos salirnos hasta 800px del centro para que se sienta dinámico en cualquier teléfono
-            const maxPan = 800 * constrainedScale; 
+            // Relajamos los bordes: Permitimos salirnos hasta 1500px del centro para explorar el "infinito"
+            const maxPan = 1500 * constrainedScale; 
             
             const constrainedX = Math.max(-maxPan, Math.min(newX, maxPan));
             const constrainedY = Math.max(-maxPan, Math.min(newY, maxPan));
@@ -542,41 +542,49 @@
                   }}
                   className="absolute top-0 left-0 flex items-center justify-center"
                 >
-                  {/* MUNDO INFINITO (2000x2000) */}
-                  <div className="relative w-[2000px] h-[2000px]">
+                  {/* MUNDO INFINITO (4000x4000) */}
+                  <div className="relative w-[4000px] h-[4000px]">
                     
-                    {/* SVG DE FONDO CIBERNÉTICO */}
-                    <svg viewBox="0 0 2000 2000" className="absolute inset-0 w-full h-full">
+                    {/* SVG DE FONDO CIBERNÉTICO CON DESVANECIMIENTO PERFECTO (AAA) */}
+                    <svg 
+                      viewBox="0 0 4000 4000" 
+                      className="absolute inset-0 w-full h-full"
+                      style={{ 
+                        maskImage: 'radial-gradient(circle at 50% 50%, black 25%, transparent 65%)', 
+                        WebkitMaskImage: 'radial-gradient(circle at 50% 50%, black 25%, transparent 65%)' 
+                      }}
+                    >
                       <defs>
-                        <pattern id="smallGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#0ea5e9" strokeWidth="0.5" opacity="0.15"/>
+                        <pattern id="smallGrid" width="50" height="50" patternUnits="userSpaceOnUse">
+                          <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#0ea5e9" strokeWidth="1" opacity="0.25"/>
                         </pattern>
-                        <pattern id="grid" width="200" height="200" patternUnits="userSpaceOnUse">
-                          <rect width="200" height="200" fill="url(#smallGrid)"/>
-                          <path d="M 200 0 L 0 0 0 200" fill="none" stroke="#0ea5e9" strokeWidth="1" opacity="0.3"/>
+                        <pattern id="grid" width="250" height="250" patternUnits="userSpaceOnUse">
+                          <rect width="250" height="250" fill="url(#smallGrid)"/>
+                          <path d="M 250 0 L 0 0 0 250" fill="none" stroke="#0ea5e9" strokeWidth="2" opacity="0.6"/>
                         </pattern>
                         {/* Brillo central */}
                         <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
-                          <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.1"/>
+                          <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.15"/>
                           <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/>
                         </radialGradient>
                       </defs>
-                      <rect width="2000" height="2000" fill="url(#grid)" />
-                      <circle cx="1000" cy="1000" r="800" fill="url(#centerGlow)"/>
+                      <rect width="4000" height="4000" fill="url(#grid)" />
+                      <circle cx="2000" cy="2000" r="1500" fill="url(#centerGlow)"/>
 
-                      {/* Ejes de Cruz central */}
-                      <line x1="1000" y1="200" x2="1000" y2="1800" stroke="#38bdf8" strokeWidth="2" opacity="0.4" strokeDasharray="15,15"/>
-                      <line x1="200" y1="1000" x2="1800" y2="1000" stroke="#38bdf8" strokeWidth="2" opacity="0.4" strokeDasharray="15,15"/>
+                      {/* Ejes de Cruz central cruzando TODO el mapa para evitar cortes rectos */}
+                      <line x1="2000" y1="0" x2="2000" y2="4000" stroke="#38bdf8" strokeWidth="3" opacity="0.6" strokeDasharray="20,20"/>
+                      <line x1="0" y1="2000" x2="4000" y2="2000" stroke="#38bdf8" strokeWidth="3" opacity="0.6" strokeDasharray="20,20"/>
                       
-                      {/* Letras Cardinales Fancy */}
-                      <text x="1000" y="250" textAnchor="middle" fill="#38bdf8" fontSize="80" fontWeight="black" opacity="0.6" letterSpacing="5">NORTH</text>
-                      <text x="1000" y="1800" textAnchor="middle" fill="#475569" fontSize="60" fontWeight="black" opacity="0.4">SOUTH</text>
-                      <text x="1750" y="1025" textAnchor="end" fill="#475569" fontSize="60" fontWeight="black" opacity="0.4">EAST</text>
-                      <text x="250" y="1025" textAnchor="start" fill="#475569" fontSize="60" fontWeight="black" opacity="0.4">WEST</text>
+                      {/* Letras Cardinales Fancy expandidas */}
+                      <text x="2000" y="400" textAnchor="middle" fill="#38bdf8" fontSize="120" fontWeight="black" opacity="0.8" letterSpacing="5">NORTH</text>
+                      <text x="2000" y="3700" textAnchor="middle" fill="#475569" fontSize="100" fontWeight="black" opacity="0.6">SOUTH</text>
+                      <text x="3700" y="2035" textAnchor="end" fill="#475569" fontSize="100" fontWeight="black" opacity="0.6">EAST</text>
+                      <text x="400" y="2035" textAnchor="start" fill="#475569" fontSize="100" fontWeight="black" opacity="0.6">WEST</text>
 
-                      {/* Círculos Radar */}
-                      <circle cx="1000" cy="1000" r="300" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeDasharray="4,8" opacity="0.4"/>
-                      <circle cx="1000" cy="1000" r="600" fill="none" stroke="#0ea5e9" strokeWidth="1" strokeDasharray="8,16" opacity="0.3"/>
+                      {/* Círculos Radar expandidos */}
+                      <circle cx="2000" cy="2000" r="500" fill="none" stroke="#0ea5e9" strokeWidth="3" strokeDasharray="8,12" opacity="0.6"/>
+                      <circle cx="2000" cy="2000" r="1000" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeDasharray="16,24" opacity="0.5"/>
+                      <circle cx="2000" cy="2000" r="1500" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeDasharray="24,32" opacity="0.4"/>
                     </svg>
 
                     {/* ZONA DE JUEGO (1000x1000 centrado) DONDE VAN LOS PINES */}
